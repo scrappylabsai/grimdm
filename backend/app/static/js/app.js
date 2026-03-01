@@ -15,6 +15,7 @@ import {
 
 import {
   drawVitalRings,
+  drawVitalStrips,
   drawStatRadar,
   startDMHeartbeat,
   setDMHeartbeatMode,
@@ -66,7 +67,12 @@ const dmIndicator = document.getElementById('dmIndicator');
 const dmIndicatorText = document.getElementById('dmIndicatorText');
 
 // Canvas instrument elements
-const vitalRingsCanvas = document.getElementById('vitalRings');
+const hpStripCanvas = document.getElementById('hpStrip');
+const xpStripCanvas = document.getElementById('xpStrip');
+const manaStripCanvas = document.getElementById('manaStrip');
+const hpValueEl = document.getElementById('hpValue');
+const xpValueEl = document.getElementById('xpValue');
+const manaValueEl = document.getElementById('manaValue');
 const statRadarCanvas = document.getElementById('statRadar');
 const dmHeartbeatCanvas = document.getElementById('dmHeartbeat');
 const creatureRadarCanvas = document.getElementById('creatureRadar');
@@ -182,10 +188,9 @@ function connectWebSocket() {
     statusText.textContent = 'Connected';
     sendBtn.disabled = false;
     if (!hasConnectedOnce) {
-      addSystemMessage('The tale begins...');
       hasConnectedOnce = true;
-      startSceneImagePolling();
     }
+    startSceneImagePolling();
   };
 
   websocket.onmessage = async (event) => {
@@ -498,7 +503,8 @@ function updateCharSheet(data) {
   if (data.xp !== undefined) {
     currentXp = data.xp % 100;
     xpText.textContent = data.xp;
-    drawVitalRings(vitalRingsCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
+    xpValueEl.textContent = data.xp;
+    drawVitalStrips(hpStripCanvas, xpStripCanvas, manaStripCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
   }
   if (data.attack) charAtk.textContent = data.attack;
   if (data.defense) charDef.textContent = data.defense;
@@ -521,8 +527,10 @@ function updateHP(hp, maxHp) {
   hpText.textContent = `${hp} / ${maxHp}`;
   hpBar.dataset.hp = hp;
   hpBar.dataset.maxhp = maxHp;
-  // Drive vital rings canvas
-  drawVitalRings(vitalRingsCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
+  // Update LED strip value labels
+  hpValueEl.textContent = `${hp}/${maxHp}`;
+  // Drive vital LED strips
+  drawVitalStrips(hpStripCanvas, xpStripCanvas, manaStripCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
 }
 
 function updateInventory(items) {
@@ -771,8 +779,17 @@ messageForm.addEventListener('submit', async (e) => {
   const text = textInput.value.trim();
   if (!text) return;
 
-  // Init audio playback on first user gesture (text submit counts)
+  // Init audio + connect on first user gesture
   await ensureDMVoice();
+  if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+    connectWebSocket();
+    // Wait for connection before sending
+    await new Promise(resolve => {
+      const check = setInterval(() => {
+        if (websocket?.readyState === WebSocket.OPEN) { clearInterval(check); resolve(); }
+      }, 100);
+    });
+  }
 
   const bubble = createMsgBubble(text, 'player');
   transcript.appendChild(bubble);
@@ -789,6 +806,12 @@ micBtn.addEventListener('click', async () => {
     micRecorder = await initMicRecorder(sendAudioChunk);
     isAudioActive = true;
     micBtn.classList.add('active');
+
+    // Connect WebSocket on first Speak press
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+      connectWebSocket();
+    }
+
     addSystemMessage('Voice active — speak to the Dungeon Master');
   } catch (e) {
     addSystemMessage('Microphone access denied');
@@ -960,7 +983,7 @@ function startSceneImagePolling() {
 // --- Restore game state on reload ---
 async function restoreGameState() {
   // Initialize instruments with defaults
-  drawVitalRings(vitalRingsCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
+  drawVitalStrips(hpStripCanvas, xpStripCanvas, manaStripCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
   drawStatRadar(statRadarCanvas, 10, 10, 10, 10, 10);
 
   try {
@@ -998,4 +1021,6 @@ async function restoreGameState() {
 
 // --- Init ---
 restoreGameState();
-connectWebSocket();
+// Don't auto-connect — wait for user gesture so AudioContext can play DM voice
+addSystemMessage('Press "Speak" to begin your adventure, or type below.');
+statusText.textContent = 'Ready';

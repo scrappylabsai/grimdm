@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GrimDM — Voice AI Dungeon Master</title>
-    <link rel="stylesheet" href="/static/css/game.css?v=16">
-    <script src="/static/js/app.js?v=16" type="module"></script>
+    <link rel="stylesheet" href="/static/css/game.css?v=18">
+    <script src="/static/js/app.js?v=18" type="module"></script>
   </head>
 
   <body>
     <!-- Scene art background / main display -->
     <div id="sceneContainer" class="scene-container">
       <div class="scene-overlay"></div>
-      <img id="sceneImage" class="scene-image" alt="Scene illustration">
+      <img id="sceneImage" class="scene-image visible" src="/static/images/splash-crossroads.jpg" alt="Scene illustration">
       <div id="sceneCaption" class="scene-caption"></div>
     </div>
 
@@ -82,7 +82,21 @@
           </div>
 
           <div class="stat-group vitals-group">
-            <canvas id="vitalRings" class="vital-rings-canvas" role="img" aria-label="HP, XP, and Mana rings"></canvas>
+            <div class="vital-bar-row">
+              <span class="vital-bar-label">HP</span>
+              <canvas id="hpStrip" class="vital-strip-canvas" width="200" height="20" role="img" aria-label="HP bar"></canvas>
+              <span class="vital-bar-value" id="hpValue">20/20</span>
+            </div>
+            <div class="vital-bar-row">
+              <span class="vital-bar-label xp">XP</span>
+              <canvas id="xpStrip" class="vital-strip-canvas" width="200" height="20" role="img" aria-label="XP bar"></canvas>
+              <span class="vital-bar-value" id="xpValue">0</span>
+            </div>
+            <div class="vital-bar-row">
+              <span class="vital-bar-label mp">MP</span>
+              <canvas id="manaStrip" class="vital-strip-canvas" width="200" height="20" role="img" aria-label="Mana bar"></canvas>
+              <span class="vital-bar-value" id="manaValue">20/20</span>
+            </div>
           </div>
 
           <div class="stat-group radar-group">

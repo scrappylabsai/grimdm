@@ -540,12 +540,41 @@ body {
   color: var(--text-primary);
 }
 
-/* Canvas instrument gauges */
-.vital-rings-canvas {
+/* Vital LED strip bars */
+.vital-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vital-bar-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent-red);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.vital-bar-label.xp { color: var(--accent-gold); }
+.vital-bar-label.mp { color: var(--accent-blue); }
+
+.vital-strip-canvas {
   display: block;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto;
+  flex: 1;
+  height: 16px;
+}
+
+.vital-bar-value {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: monospace;
+  width: 40px;
+  text-align: left;
+  flex-shrink: 0;
 }
 
 .stat-radar-canvas {

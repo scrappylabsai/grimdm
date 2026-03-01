@@ -38,129 +38,129 @@ const TEXT_DIM = '#7a7672';
 const BG_TRACK = 'rgba(255,255,255,0.04)';
 
 // ============================================================
-// 1. VITAL RINGS — HP (outer), XP (middle), Mana (inner)
+// 1. VITAL LED STRIPS — HP, XP, Mana as segmented bars
 // ============================================================
 
-// Animation state for smooth transitions
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function lerpColor(a, b, t) {
+  const ar = parseInt(a.slice(1, 3), 16), ag = parseInt(a.slice(3, 5), 16), ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16), bg = parseInt(b.slice(3, 5), 16), bb = parseInt(b.slice(5, 7), 16);
+  return `rgb(${Math.round(lerp(ar, br, t))},${Math.round(lerp(ag, bg, t))},${Math.round(lerp(ab, bb, t))})`;
+}
+
+// HP color: green (full) → amber (mid) → red (low)
+const HP_GREEN = '#4a9a5c';
+const HP_AMBER = '#c9a84c';
+const HP_RED = '#c94040';
+
+function hpSegmentColor(segPct) {
+  // segPct = position in bar (0 = left/low, 1 = right/high)
+  if (segPct < 0.4) return lerpColor(HP_RED, HP_AMBER, segPct / 0.4);
+  return lerpColor(HP_AMBER, HP_GREEN, (segPct - 0.4) / 0.6);
+}
+
+// Animation state
 const vitalState = {
   hp: 20, maxHp: 20, xp: 0, mana: 20, maxMana: 20,
-  // Animated (tweened) values
   aHp: 20, aXp: 0, aMana: 20,
-  // Low HP pulse
   pulsePhase: 0,
   animId: null,
+  canvases: null,
 };
 
-export function drawVitalRings(canvas, hp, maxHp, xp, mana, maxMana) {
-  // Update targets
+export function drawVitalStrips(hpCanvas, xpCanvas, manaCanvas, hp, maxHp, xp, mana, maxMana) {
   vitalState.hp = hp;
   vitalState.maxHp = maxHp || 20;
   vitalState.xp = xp;
   vitalState.mana = mana;
   vitalState.maxMana = maxMana || 20;
+  vitalState.canvases = { hp: hpCanvas, xp: xpCanvas, mana: manaCanvas };
 
-  // If no animation running, start one
   if (!vitalState.animId) {
-    vitalState.animId = requestAnimationFrame(() => animateVitals(canvas));
+    vitalState.animId = requestAnimationFrame(animateVitalStrips);
   }
 }
 
-function animateVitals(canvas) {
-  const s = vitalState;
-  const ease = 0.08;
+// Legacy compat — redirect to strips if canvases are set
+export function drawVitalRings(_canvas, hp, maxHp, xp, mana, maxMana) {
+  if (vitalState.canvases) {
+    drawVitalStrips(vitalState.canvases.hp, vitalState.canvases.xp, vitalState.canvases.mana, hp, maxHp, xp, mana, maxMana);
+  }
+}
 
-  // Tween toward targets
+function animateVitalStrips() {
+  const s = vitalState;
+  const ease = 0.1;
+
   s.aHp += (s.hp - s.aHp) * ease;
   s.aXp += (s.xp - s.aXp) * ease;
   s.aMana += (s.mana - s.aMana) * ease;
-  s.pulsePhase += 0.04;
+  s.pulsePhase += 0.05;
 
-  renderVitalRings(canvas, s);
+  if (s.canvases) {
+    const hpPct = s.maxHp > 0 ? s.aHp / s.maxHp : 0;
+    const lowHp = s.hp / s.maxHp < 0.3;
+    renderLedStrip(s.canvases.hp, hpPct, 'hp', lowHp ? s.pulsePhase : null);
+    renderLedStrip(s.canvases.xp, s.aXp / 100, 'xp', null);
+    renderLedStrip(s.canvases.mana, s.maxMana > 0 ? s.aMana / s.maxMana : 0, 'mana', null);
+  }
 
-  // Keep animating if not settled, or if low HP (for pulse)
   const settled =
     Math.abs(s.aHp - s.hp) < 0.1 &&
     Math.abs(s.aXp - s.xp) < 0.1 &&
     Math.abs(s.aMana - s.mana) < 0.1;
-  const lowHp = s.hp / s.maxHp < 0.3;
+  const lowHp = s.maxHp > 0 && s.hp / s.maxHp < 0.3;
 
   if (!settled || lowHp) {
-    s.animId = requestAnimationFrame(() => animateVitals(canvas));
+    s.animId = requestAnimationFrame(animateVitalStrips);
   } else {
     s.animId = null;
   }
 }
 
-function renderVitalRings(canvas, s) {
+function renderLedStrip(canvas, pct, type, pulsePhase) {
   const { ctx, w, h } = dpr(canvas);
   ctx.clearRect(0, 0, w, h);
 
-  const cx = w / 2, cy = h / 2;
-  const rBase = Math.min(w, h) * 0.42;
-  const ringGap = 14;
-  const lw = 9;
-  const lowHp = s.hp / s.maxHp < 0.3;
+  const segs = 24;
+  const gap = 2;
+  const pad = 1;
+  const segW = (w - pad * 2 - (segs - 1) * gap) / segs;
+  const segH = h - 4;
+  const yOff = 2;
+  pct = Math.max(0, Math.min(1, pct));
+  const lit = Math.round(pct * segs);
 
-  const rings = [
-    { val: s.aHp, max: s.maxHp, color: HP_COLOR, label: 'HP' },
-    { val: s.aXp, max: 100, color: XP_COLOR, label: 'XP' },
-    { val: s.aMana, max: s.maxMana, color: MANA_COLOR, label: 'MP' },
-  ];
+  for (let i = 0; i < segs; i++) {
+    const x = pad + i * (segW + gap);
+    const segPct = i / (segs - 1); // position in bar
 
-  ctx.lineCap = 'round';
+    if (i < lit) {
+      let c;
+      if (type === 'hp') c = hpSegmentColor(segPct);
+      else if (type === 'xp') c = XP_COLOR;
+      else c = MANA_COLOR;
 
-  for (let i = 0; i < rings.length; i++) {
-    const r = rBase - i * ringGap;
-    const pct = Math.max(0, Math.min(1, rings[i].val / rings[i].max));
-
-    // Background track
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI * 1.5);
-    ctx.lineWidth = lw;
-    ctx.strokeStyle = BG_TRACK;
-    ctx.stroke();
-
-    // Filled arc
-    if (pct > 0) {
-      let color = rings[i].color;
-      // Low HP pulse on outer ring
-      if (i === 0 && lowHp) {
-        const pulse = 0.5 + 0.5 * Math.sin(s.pulsePhase * 3);
-        color = rgba(HP_COLOR, 0.4 + pulse * 0.6);
+      // Pulse glow on low HP
+      if (pulsePhase !== null && type === 'hp') {
+        const pulse = 0.5 + 0.5 * Math.sin(pulsePhase * 4);
+        ctx.shadowBlur = 4 + 4 * pulse;
+        ctx.shadowColor = HP_RED;
+        ctx.fillStyle = rgba(HP_RED, 0.6 + 0.4 * pulse);
+      } else {
+        ctx.shadowBlur = 3;
+        ctx.shadowColor = c;
+        ctx.fillStyle = c;
       }
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
-      ctx.lineWidth = lw;
-      ctx.strokeStyle = color;
-      ctx.stroke();
-
-      // Glow on low HP
-      if (i === 0 && lowHp) {
-        ctx.save();
-        ctx.shadowBlur = 8 + 6 * Math.sin(s.pulsePhase * 3);
-        ctx.shadowColor = HP_COLOR;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
-        ctx.lineWidth = lw;
-        ctx.strokeStyle = 'transparent';
-        ctx.stroke();
-        ctx.restore();
-      }
+      ctx.fillRect(x, yOff, segW, segH);
+    } else {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = BG_TRACK;
+      ctx.fillRect(x, yOff, segW, segH);
     }
   }
-
-  // Center text: HP numerically
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = 'bold 18px Georgia, serif';
-  ctx.fillStyle = lowHp ? HP_COLOR : TEXT_PRIMARY;
-  ctx.fillText(`${Math.round(s.aHp)}/${Math.round(s.maxHp)}`, cx, cy - 4);
-
-  // Smaller label below
-  ctx.font = '9px system-ui, sans-serif';
-  ctx.fillStyle = TEXT_DIM;
-  ctx.fillText('HP', cx, cy + 14);
+  ctx.shadowBlur = 0;
 }
 
 
