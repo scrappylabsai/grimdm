@@ -20,7 +20,7 @@ from google.genai import types
 # Load environment variables before importing agent
 load_dotenv(Path(__file__).parent / ".env")
 
-from dm_agent.agent import agent  # noqa: E402
+from app.dm_agent.agent import agent  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
