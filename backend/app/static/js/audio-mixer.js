@@ -25,8 +25,14 @@ export async function initDMVoice() {
 
 // --- Mic Recorder (PCM 16kHz) ---
 
+const TARGET_SAMPLE_RATE = 16000;
+
 export async function initMicRecorder(onPCMData) {
-  const ctx = new AudioContext({ sampleRate: 16000 });
+  // Don't force sampleRate — browser may ignore it. We resample manually.
+  const ctx = new AudioContext();
+  const actualRate = ctx.sampleRate;
+  console.log(`[GrimDM] Mic AudioContext sampleRate: ${actualRate}`);
+
   const workletURL = new URL('./pcm-recorder-processor.js', import.meta.url);
   await ctx.audioWorklet.addModule(workletURL);
 
@@ -38,11 +44,30 @@ export async function initMicRecorder(onPCMData) {
   source.connect(recorderNode);
 
   recorderNode.port.onmessage = (event) => {
-    const pcm16 = convertFloat32ToPCM(event.data);
+    let float32 = event.data;
+    // Resample to 16kHz if browser gave us a different rate
+    if (actualRate !== TARGET_SAMPLE_RATE) {
+      float32 = resample(float32, actualRate, TARGET_SAMPLE_RATE);
+    }
+    const pcm16 = convertFloat32ToPCM(float32);
     onPCMData(pcm16);
   };
 
   return { ctx, recorderNode, stream };
+}
+
+function resample(input, fromRate, toRate) {
+  const ratio = fromRate / toRate;
+  const outputLength = Math.round(input.length / ratio);
+  const output = new Float32Array(outputLength);
+  for (let i = 0; i < outputLength; i++) {
+    const srcIdx = i * ratio;
+    const lo = Math.floor(srcIdx);
+    const hi = Math.min(lo + 1, input.length - 1);
+    const frac = srcIdx - lo;
+    output[i] = input[lo] * (1 - frac) + input[hi] * frac;
+  }
+  return output;
 }
 
 function convertFloat32ToPCM(float32) {
@@ -106,6 +131,7 @@ let musicGainNode = null;
 let currentMusicSource = null;
 let currentMusicTrack = null;
 let musicEnabled = false;
+let musicVolume = 0.15; // 0-1, default background level
 
 function getMusicContext() {
   if (!musicCtx) {
@@ -147,9 +173,9 @@ export async function setMusic(trackUrl, crossfadeDuration = 2.0) {
     source.loop = true;
     source.connect(gain);
 
-    // Fade in
+    // Fade in to current volume level
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + crossfadeDuration / 2);
+    gain.gain.linearRampToValueAtTime(musicVolume, ctx.currentTime + crossfadeDuration / 2);
 
     source.start();
     currentMusicSource = source;
@@ -158,16 +184,67 @@ export async function setMusic(trackUrl, crossfadeDuration = 2.0) {
   }
 }
 
-export function toggleMusic() {
-  musicEnabled = !musicEnabled;
+export function setMusicVolume(level) {
+  musicVolume = Math.max(0, Math.min(1, level));
+  const wasEnabled = musicEnabled;
+  musicEnabled = musicVolume > 0;
+
+  if (musicEnabled && musicGainNode) {
+    musicGainNode.gain.linearRampToValueAtTime(musicVolume, musicGainNode.context.currentTime + 0.1);
+  }
+
   if (!musicEnabled && currentMusicSource) {
     try { currentMusicSource.stop(); } catch (e) {}
     currentMusicSource = null;
     currentMusicTrack = null;
+  }
+
+  return musicEnabled;
+}
+
+export function toggleMusic() {
+  if (musicEnabled) {
+    setMusicVolume(0);
+  } else {
+    setMusicVolume(0.15);
   }
   return musicEnabled;
 }
 
 export function isMusicEnabled() {
   return musicEnabled;
+}
+
+export function getMusicVolume() {
+  return musicVolume;
+}
+
+// --- Sound Effects Channel ---
+
+let sfxCtx = null;
+
+function getSFXContext() {
+  if (!sfxCtx) {
+    sfxCtx = new AudioContext();
+  }
+  return sfxCtx;
+}
+
+export async function playSFX(url) {
+  const ctx = getSFXContext();
+  if (ctx.state === 'suspended') await ctx.resume();
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return;
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(ctx.destination);
+    source.start();
+  } catch (e) {
+    console.warn('SFX playback failed:', url, e);
+  }
 }

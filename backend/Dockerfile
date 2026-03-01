@@ -5,17 +5,18 @@ WORKDIR /app
 # Install uv for fast dependency resolution
 RUN pip install uv
 
-# Copy dependency files first for layer caching
+# Copy all source (pyproject.toml + app/) for non-editable install
 COPY pyproject.toml .
-
-# Install dependencies
-RUN uv pip install --system -e ".[firestore]"
-
-# Copy application code
 COPY app/ app/
+
+# Install package + dependencies
+RUN uv pip install --system ".[firestore]"
+
+# Create data directory for SQLite sessions + JSON game states
+RUN mkdir -p /app/data/game_states
 
 # Expose port
 EXPOSE 8080
 
-# Run with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run with uvicorn — WebSocket max size 5MB, single worker (bidi state is in-memory)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--ws-max-size", "5242880"]

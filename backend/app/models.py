@@ -58,6 +58,15 @@ class CombatState(BaseModel):
     round_number: int = 1
 
 
+class CharacterStats(BaseModel):
+    """Rolled character stats from creation."""
+    strength: int = 10
+    dexterity: int = 10
+    constitution: int = 10
+    wisdom: int = 10
+    charisma: int = 10
+
+
 class Player(BaseModel):
     name: str = "Wanderer"
     level: int = 1
@@ -66,6 +75,7 @@ class Player(BaseModel):
     max_hp: int = 20
     attack: int = 5
     defense: int = 3
+    stats: CharacterStats = Field(default_factory=CharacterStats)
     location: str = "crossroads"
     inventory: list[Item] = Field(default_factory=list)
     gold: int = 10
@@ -73,6 +83,7 @@ class Player(BaseModel):
     npc_relationships: list[NPCRelationship] = Field(default_factory=list)
     combat: CombatState = Field(default_factory=CombatState)
     current_music: str = "village"
+    voice_captured: bool = False
 
 
 class GameState(BaseModel):

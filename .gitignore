@@ -11,3 +11,5 @@ node_modules/
 *.log
 backend/app/static/music/*.mp3
 backend/app/static/music/sfx/*.mp3
+backend/data/
+backend/uv.lock

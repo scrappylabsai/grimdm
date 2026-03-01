@@ -11,16 +11,19 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from google.adk.agents.live_request_queue import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions.sqlite_session_service import SqliteSessionService
 from google.genai import types
 
 # Load environment variables before importing agent
 load_dotenv(Path(__file__).parent / ".env")
 
 from app.dm_agent.agent import agent  # noqa: E402
+from app.session_context import set_active_session  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,10 +38,27 @@ APP_NAME = "grimdm"
 
 app = FastAPI(title="GrimDM", version="0.1.0")
 
+
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
+
+app.add_middleware(NoCacheStaticMiddleware)
+
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-session_service = InMemorySessionService()
+# Use SQLite for persistent sessions (survives server restarts + browser refreshes)
+# Falls back to in-memory if SQLite path not writable (e.g. read-only container)
+_db_path = Path(__file__).parent.parent / "data" / "sessions.db"
+_db_path.parent.mkdir(parents=True, exist_ok=True)
+session_service = SqliteSessionService(db_path=str(_db_path))
+logger.info(f"Session persistence: SQLite at {_db_path}")
+
 runner = Runner(app_name=APP_NAME, agent=agent, session_service=session_service)
 
 
@@ -54,6 +74,68 @@ async def health():
     return {"status": "ok", "app": APP_NAME, "model": agent.model}
 
 
+@app.get("/api/scene-images/{session_id}")
+async def poll_scene_images(session_id: str):
+    """Poll for pending scene images (generated async, delivered here)."""
+    from app.tools.scene import get_pending_images
+    images = get_pending_images(session_id)
+    return {"images": images}
+
+
+@app.get("/api/npc-audio/{session_id}")
+async def poll_npc_audio(session_id: str):
+    """Poll for pending NPC voice audio (generated async, delivered here)."""
+    from app.tools.npc_voice import get_pending_npc_audio
+    audio = get_pending_npc_audio(session_id)
+    return {"audio": audio}
+
+
+@app.get("/api/saved-games")
+async def list_saved_games():
+    """List all saved game states for the load screen."""
+    from app.tools.game import _STATE_DIR
+    saves = []
+    for path in sorted(_STATE_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            data = json.loads(path.read_text())
+            player = data.get("player", {})
+            name = player.get("name", "Unknown")
+            if name == "Wanderer":
+                continue  # Skip empty/unused sessions
+            saves.append({
+                "session_id": path.stem,
+                "name": name,
+                "level": player.get("level", 1),
+                "location": player.get("location", "unknown"),
+            })
+        except Exception:
+            continue
+    return {"saves": saves[:10]}  # Last 10 saves
+
+
+@app.get("/api/game-state/{session_id}")
+async def get_game_state(session_id: str):
+    """Get persisted game state for a session (used on page reload)."""
+    from app.tools.game import _get_state
+    state = _get_state(session_id)
+    p = state.player
+    return {
+        "name": p.name,
+        "level": p.level,
+        "hp": p.hp,
+        "max_hp": p.max_hp,
+        "xp": p.xp,
+        "attack": p.attack,
+        "defense": p.defense,
+        "gold": p.gold,
+        "location": p.location,
+        "stats": p.stats.model_dump(),
+        "inventory": [item.model_dump() for item in p.inventory],
+        "quests": [q.model_dump() for q in p.quests if q.status.value == "active"],
+        "combat_active": p.combat.active,
+    }
+
+
 # --- WebSocket Endpoint ---
 
 @app.websocket("/ws/{user_id}/{session_id}")
@@ -64,6 +146,7 @@ async def websocket_endpoint(
 ) -> None:
     """Bidirectional streaming WebSocket for voice gameplay."""
     logger.info(f"WS connect: user={user_id}, session={session_id}")
+    set_active_session(user_id, session_id)
     await websocket.accept()
 
     # Native audio model — always use AUDIO response modality
@@ -72,8 +155,6 @@ async def websocket_endpoint(
         response_modalities=["AUDIO"],
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
-        session_resumption=types.SessionResumptionConfig(),
-        enable_affective_dialog=True,
     )
 
     # Get or create session
@@ -89,14 +170,25 @@ async def websocket_endpoint(
     # Tools receive session_id as a parameter from the agent
     live_request_queue = LiveRequestQueue()
 
+    # Auto-start: send an opening prompt so the DM speaks immediately
+    # without waiting for the player to figure out they need to talk
+    opening_prompt = types.Content(
+        parts=[types.Part(text="The player has just connected. Begin the game — greet them and ask their name.")]
+    )
+    live_request_queue.send_content(opening_prompt)
+
     async def upstream_task() -> None:
         """Receive messages from browser WebSocket and queue for ADK."""
         while True:
             message = await websocket.receive()
 
             if "bytes" in message:
+                raw = message["bytes"]
+                # Validate: PCM 16-bit = 2 bytes per sample, must be even length
+                if len(raw) < 2 or len(raw) % 2 != 0:
+                    continue
                 audio_blob = types.Blob(
-                    mime_type="audio/pcm;rate=16000", data=message["bytes"]
+                    mime_type="audio/pcm;rate=16000", data=raw
                 )
                 live_request_queue.send_realtime(audio_blob)
 
@@ -115,6 +207,9 @@ async def websocket_endpoint(
                     image_blob = types.Blob(mime_type=mime_type, data=image_data)
                     live_request_queue.send_realtime(image_blob)
 
+    # Track thinking text so we can filter the duplicate non-thought copy
+    seen_thinking_texts: set[str] = set()
+
     async def downstream_task() -> None:
         """Receive ADK events and send to browser WebSocket."""
         async for event in runner.run_live(
@@ -123,6 +218,35 @@ async def websocket_endpoint(
             live_request_queue=live_request_queue,
             run_config=run_config,
         ):
+            # Filter out thinking/reasoning content before sending to browser.
+            # ADK sends thinking text twice: once with thought=True, once without.
+            # We strip both copies server-side.
+            if hasattr(event, "content") and event.content and event.content.parts:
+                filtered_parts = []
+                for part in event.content.parts:
+                    if hasattr(part, "thought") and part.thought:
+                        # Track thinking text so we can catch the duplicate
+                        if hasattr(part, "text") and part.text:
+                            seen_thinking_texts.add(part.text[:100])
+                        continue
+                    # Filter duplicate: non-thought text that matches a thinking part
+                    if hasattr(part, "text") and part.text:
+                        if part.text[:100] in seen_thinking_texts:
+                            continue
+                    filtered_parts.append(part)
+
+                if not filtered_parts:
+                    continue  # Skip entirely empty events
+                event.content.parts = filtered_parts
+
+            # Log tool calls and results for debugging
+            if hasattr(event, "content") and event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, "function_call") and part.function_call:
+                        logger.info(f"Tool call: {part.function_call.name}")
+                    if hasattr(part, "function_response") and part.function_response:
+                        logger.info(f"Tool result: {part.function_response.name}")
+
             event_json = event.model_dump_json(exclude_none=True, by_alias=True)
             await websocket.send_text(event_json)
 
@@ -131,6 +255,17 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         logger.info(f"Client disconnected: user={user_id}")
     except Exception as e:
+        error_msg = str(e)
         logger.error(f"WS error: {e}", exc_info=True)
+        # 1007/1008 on reconnect = corrupted session history in SQLite
+        # Delete the session so next reconnect gets a fresh one
+        if "1007" in error_msg or "1008" in error_msg:
+            logger.warning(f"Clearing corrupted session: {session_id}")
+            try:
+                await session_service.delete_session(
+                    app_name=APP_NAME, user_id=user_id, session_id=session_id
+                )
+            except Exception:
+                pass  # delete_session may not exist in all ADK versions
     finally:
         live_request_queue.close()

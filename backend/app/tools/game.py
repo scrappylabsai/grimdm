@@ -1,13 +1,16 @@
 """Core game mechanic tools for GrimDM.
 
 These are registered as ADK tools that Gemini can call during gameplay.
-Game state is stored in a module-level dict keyed by session_id.
+Game state is persisted to JSON files in data/game_states/.
 """
 
 import json
+import logging
 import random
+from pathlib import Path
 
 from app.models import (
+    CharacterStats,
     CombatState,
     GameState,
     Item,
@@ -16,15 +19,43 @@ from app.models import (
     Quest,
     QuestStatus,
 )
+from app.session_context import resolve_session_id
 
-# In-memory game state per session (replaced by Firestore in production)
+logger = logging.getLogger(__name__)
+
+# In-memory cache + JSON file persistence
 _game_states: dict[str, GameState] = {}
+_STATE_DIR = Path(__file__).parent.parent.parent / "data" / "game_states"
+_STATE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _state_path(session_id: str) -> Path:
+    # Sanitize session_id for filesystem safety
+    safe_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
+    return _STATE_DIR / f"{safe_id}.json"
 
 
 def _get_state(session_id: str) -> GameState:
     if session_id not in _game_states:
-        _game_states[session_id] = GameState(session_id=session_id)
+        path = _state_path(session_id)
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                _game_states[session_id] = GameState.model_validate(data)
+                logger.info(f"Loaded game state from {path}")
+            except Exception as e:
+                logger.warning(f"Failed to load game state: {e}, creating new")
+                _game_states[session_id] = GameState(session_id=session_id)
+        else:
+            _game_states[session_id] = GameState(session_id=session_id)
     return _game_states[session_id]
+
+
+def _save_state(session_id: str) -> None:
+    if session_id in _game_states:
+        path = _state_path(session_id)
+        path.write_text(_game_states[session_id].model_dump_json(indent=2))
+
 
 
 def _load_world() -> dict:
@@ -67,6 +98,7 @@ def roll_dice(notation: str, session_id: str) -> str:
     Returns:
         JSON with individual rolls, modifier, and total
     """
+    session_id = resolve_session_id(session_id)
     notation = notation.lower().strip()
 
     # Parse notation: NdS+M or NdS-M
@@ -96,6 +128,7 @@ def roll_dice(notation: str, session_id: str) -> str:
 
     state = _get_state(session_id)
     state.events_log.append(f"Rolled {notation}: {rolls} + {modifier} = {total}")
+    _save_state(session_id)
 
     result = {
         "notation": notation,
@@ -119,6 +152,7 @@ def get_player_status(session_id: str) -> str:
     Returns:
         JSON with player stats
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     p = state.player
     return json.dumps({
@@ -129,6 +163,7 @@ def get_player_status(session_id: str) -> str:
         "max_hp": p.max_hp,
         "attack": p.attack,
         "defense": p.defense,
+        "stats": p.stats.model_dump(),
         "location": p.location,
         "gold": p.gold,
         "inventory_count": len(p.inventory),
@@ -148,10 +183,63 @@ def set_player_name(name: str, session_id: str) -> str:
     Returns:
         Confirmation message
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     state.player.name = name
     state.events_log.append(f"Player named themselves: {name}")
+    _save_state(session_id)
     return json.dumps({"status": "ok", "name": name})
+
+
+def roll_character_stats(session_id: str) -> str:
+    """Roll all five character stats at once during character creation.
+
+    Rolls d20 for Strength, Dexterity, Constitution, Wisdom, and Charisma.
+    Automatically sets the player's stats and derives combat values (ATK, DEF, HP).
+    Call this ONCE during character creation — it handles all five rolls.
+
+    Args:
+        session_id: Current game session ID
+
+    Returns:
+        All five rolls with individual results plus derived combat values
+    """
+    session_id = resolve_session_id(session_id)
+    state = _get_state(session_id)
+
+    # Roll all five stats
+    rolls = {
+        "strength": random.randint(1, 20),
+        "dexterity": random.randint(1, 20),
+        "constitution": random.randint(1, 20),
+        "wisdom": random.randint(1, 20),
+        "charisma": random.randint(1, 20),
+    }
+
+    state.player.stats = CharacterStats(**rolls)
+
+    # Derive combat stats
+    state.player.attack = 3 + rolls["strength"] // 4
+    state.player.defense = 2 + rolls["dexterity"] // 4
+    state.player.max_hp = 15 + rolls["constitution"]
+    state.player.hp = state.player.max_hp
+
+    state.events_log.append(
+        f"Character stats rolled: STR={rolls['strength']} DEX={rolls['dexterity']} "
+        f"CON={rolls['constitution']} WIS={rolls['wisdom']} CHA={rolls['charisma']}"
+    )
+    _save_state(session_id)
+
+    return json.dumps({
+        "status": "ok",
+        "rolls": rolls,
+        "derived": {
+            "attack": state.player.attack,
+            "defense": state.player.defense,
+            "hp": state.player.hp,
+            "max_hp": state.player.max_hp,
+        },
+    })
 
 
 # --- Inventory ---
@@ -165,6 +253,7 @@ def check_inventory(session_id: str) -> str:
     Returns:
         JSON list of items in inventory
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     items = [item.model_dump() for item in state.player.inventory]
     return json.dumps({"items": items, "gold": state.player.gold})
@@ -188,6 +277,7 @@ def add_item(name: str, item_type: str, description: str, session_id: str,
     Returns:
         Confirmation with updated inventory count
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     item = Item(
         name=name,
@@ -204,10 +294,12 @@ def add_item(name: str, item_type: str, description: str, session_id: str,
         if existing.name == name:
             existing.quantity += quantity
             state.events_log.append(f"Added {quantity}x {name} (stacked)")
+            _save_state(session_id)
             return json.dumps({"status": "stacked", "name": name, "new_quantity": existing.quantity})
 
     state.player.inventory.append(item)
     state.events_log.append(f"Added {quantity}x {name} to inventory")
+    _save_state(session_id)
     return json.dumps({"status": "added", "name": name, "inventory_count": len(state.player.inventory)})
 
 
@@ -222,16 +314,19 @@ def remove_item(name: str, session_id: str, quantity: int = 1) -> str:
     Returns:
         Confirmation or error if item not found
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     for i, item in enumerate(state.player.inventory):
         if item.name.lower() == name.lower():
             if item.quantity <= quantity:
                 state.player.inventory.pop(i)
                 state.events_log.append(f"Removed all {name} from inventory")
+                _save_state(session_id)
                 return json.dumps({"status": "removed", "name": name})
             else:
                 item.quantity -= quantity
                 state.events_log.append(f"Removed {quantity}x {name}")
+                _save_state(session_id)
                 return json.dumps({"status": "reduced", "name": name, "remaining": item.quantity})
 
     return json.dumps({"error": f"Item '{name}' not found in inventory"})
@@ -248,9 +343,11 @@ def modify_gold(amount: int, session_id: str, reason: str = "") -> str:
     Returns:
         New gold total
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     state.player.gold = max(0, state.player.gold + amount)
     state.events_log.append(f"Gold {'gained' if amount > 0 else 'spent'}: {abs(amount)} ({reason})")
+    _save_state(session_id)
     return json.dumps({"gold": state.player.gold, "change": amount, "reason": reason})
 
 
@@ -265,6 +362,7 @@ def get_location_info(session_id: str) -> str:
     Returns:
         JSON with location details, connections, and present NPCs
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     world = _load_world()
     location = world.get("locations", {}).get(state.player.location)
@@ -298,6 +396,7 @@ def move_player(destination: str, session_id: str) -> str:
     Returns:
         New location info or error if not connected
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     world = _load_world()
     current = world.get("locations", {}).get(state.player.location)
@@ -319,6 +418,7 @@ def move_player(destination: str, session_id: str) -> str:
     state.player.current_music = new_location.get("music", "village")
     state.turn_count += 1
     state.events_log.append(f"Moved from {old_location} to {destination}")
+    _save_state(session_id)
 
     return json.dumps({
         "status": "moved",
@@ -344,11 +444,15 @@ def start_combat(enemies: str, session_id: str) -> str:
     Returns:
         Combat state with initiative order
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     if state.player.combat.active:
         return json.dumps({"error": "Combat already active"})
 
-    enemy_list = json.loads(enemies)
+    try:
+        enemy_list = json.loads(enemies)
+    except (json.JSONDecodeError, TypeError):
+        return json.dumps({"error": "Invalid enemies format — expected JSON array"})
     for enemy in enemy_list:
         enemy.setdefault("max_hp", enemy["hp"])
 
@@ -369,6 +473,7 @@ def start_combat(enemies: str, session_id: str) -> str:
         round_number=1,
     )
     state.events_log.append(f"Combat started: {[e['name'] for e in enemy_list]}")
+    _save_state(session_id)
 
     return json.dumps({
         "status": "combat_started",
@@ -390,6 +495,7 @@ def attack(target: str, session_id: str) -> str:
     Returns:
         Attack result with damage dealt and remaining HP
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     if not state.player.combat.active:
         return json.dumps({"error": "No active combat"})
@@ -453,6 +559,7 @@ def attack(target: str, session_id: str) -> str:
         result["suggested_music"] = "victory"
 
     state.events_log.append(f"Attack on {target}: {'Hit' if result.get('hit') else 'Miss'} for {result.get('damage', 0)} damage")
+    _save_state(session_id)
     return json.dumps(result)
 
 
@@ -465,6 +572,7 @@ def enemy_turn(session_id: str) -> str:
     Returns:
         Results of all enemy attacks
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     if not state.player.combat.active:
         return json.dumps({"error": "No active combat"})
@@ -501,6 +609,7 @@ def enemy_turn(session_id: str) -> str:
 
     state.player.combat.round_number += 1
     state.events_log.append(f"Enemy round: {len(results)} attacks, player HP: {state.player.hp}")
+    _save_state(session_id)
 
     return json.dumps({
         "enemy_attacks": results,
@@ -520,9 +629,11 @@ def end_combat(session_id: str) -> str:
     Returns:
         Final combat summary
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     state.player.combat.active = False
     state.events_log.append("Combat ended")
+    _save_state(session_id)
     return json.dumps({
         "status": "combat_ended",
         "player_hp": state.player.hp,
@@ -541,11 +652,13 @@ def heal_player(amount: int, session_id: str, source: str = "potion") -> str:
     Returns:
         New HP values
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     old_hp = state.player.hp
     state.player.hp = min(state.player.max_hp, state.player.hp + amount)
     healed = state.player.hp - old_hp
     state.events_log.append(f"Healed {healed} HP from {source}")
+    _save_state(session_id)
     return json.dumps({"hp": state.player.hp, "max_hp": state.player.max_hp, "healed": healed})
 
 
@@ -564,6 +677,7 @@ def update_quest(quest_id: str, action: str, session_id: str,
     Returns:
         Updated quest state
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     quests_data = _load_quests()
 
@@ -591,7 +705,9 @@ def update_quest(quest_id: str, action: str, session_id: str,
         )
         state.player.quests.append(quest)
         state.events_log.append(f"Quest started: {quest.name}")
-        return json.dumps({"status": "started", "quest": quest.model_dump()})
+        _save_state(session_id)
+        active_quests = [q.model_dump() for q in state.player.quests if q.status == QuestStatus.ACTIVE]
+        return json.dumps({"status": "started", "quest": quest.model_dump(), "quests": active_quests})
 
     if not quest:
         return json.dumps({"error": f"Quest '{quest_id}' not found in player's quests"})
@@ -600,22 +716,27 @@ def update_quest(quest_id: str, action: str, session_id: str,
         if objective not in quest.completed_objectives:
             quest.completed_objectives.append(objective)
         state.events_log.append(f"Quest objective completed: {objective}")
+        _save_state(session_id)
         return json.dumps({"status": "objective_completed", "quest": quest.model_dump()})
 
     if action == "complete":
         quest.status = QuestStatus.COMPLETED
         state.player.xp += quest.reward_xp
         state.events_log.append(f"Quest completed: {quest.name} (+{quest.reward_xp} XP)")
+        _save_state(session_id)
+        active_quests = [q.model_dump() for q in state.player.quests if q.status == QuestStatus.ACTIVE]
         return json.dumps({
             "status": "completed",
             "quest": quest.model_dump(),
             "xp_gained": quest.reward_xp,
             "total_xp": state.player.xp,
+            "quests": active_quests,
         })
 
     if action == "fail":
         quest.status = QuestStatus.FAILED
         state.events_log.append(f"Quest failed: {quest.name}")
+        _save_state(session_id)
         return json.dumps({"status": "failed", "quest": quest.model_dump()})
 
     return json.dumps({"error": f"Unknown action: {action}"})
@@ -633,6 +754,7 @@ def get_npc_relationship(npc_id: str, session_id: str) -> str:
     Returns:
         Relationship status and NPC info
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
     npcs_data = _load_npcs()
     npc_info = npcs_data.get("npcs", {}).get(npc_id)
@@ -673,6 +795,7 @@ def modify_npc_relationship(npc_id: str, disposition_change: int,
     Returns:
         Updated relationship
     """
+    session_id = resolve_session_id(session_id)
     state = _get_state(session_id)
 
     rel = None
@@ -691,6 +814,7 @@ def modify_npc_relationship(npc_id: str, disposition_change: int,
         rel.notes.append(reason)
 
     state.events_log.append(f"NPC {npc_id} disposition: {rel.disposition} ({reason})")
+    _save_state(session_id)
     return json.dumps({
         "npc_id": npc_id,
         "disposition": rel.disposition,
