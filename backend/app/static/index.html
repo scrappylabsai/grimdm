@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrimDM — Voice AI Dungeon Master</title>
+    <link rel="stylesheet" href="/static/css/game.css">
+    <script src="/static/js/app.js" type="module"></script>
+  </head>
+
+  <body>
+    <!-- Scene art background / main display -->
+    <div id="sceneContainer" class="scene-container">
+      <div class="scene-overlay"></div>
+      <img id="sceneImage" class="scene-image" alt="Scene illustration">
+      <div id="sceneCaption" class="scene-caption"></div>
+    </div>
+
+    <!-- Main game layout -->
+    <div class="game-layout">
+      <!-- Left: Transcript / chat -->
+      <div class="transcript-panel">
+        <div class="panel-header">
+          <h2>Tale</h2>
+          <div class="connection-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Connecting...</span>
+          </div>
+        </div>
+        <div id="transcript" class="transcript-content"></div>
+
+        <div class="input-area">
+          <form id="messageForm">
+            <input
+              type="text"
+              id="textInput"
+              placeholder="Type or speak..."
+              autocomplete="off"
+              aria-label="Message input"
+            />
+            <button type="submit" id="sendBtn" disabled aria-label="Send message">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+          </form>
+          <div class="audio-controls">
+            <button type="button" id="micBtn" aria-label="Start voice input">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+              <span>Speak</span>
+            </button>
+            <button type="button" id="muteBtn" class="muted" aria-label="Toggle music">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M23 9l-6 6M17 9l6 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Character sheet -->
+      <div class="character-panel">
+        <div class="panel-header">
+          <h2>Character</h2>
+        </div>
+        <div class="character-content">
+          <div class="stat-group">
+            <div class="char-name" id="charName">Wanderer</div>
+            <div class="char-level">Level <span id="charLevel">1</span></div>
+          </div>
+
+          <div class="stat-group">
+            <label>HP</label>
+            <div class="hp-bar-container">
+              <div class="hp-bar" id="hpBar" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="20">
+                <span id="hpText">20 / 20</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-group">
+            <label>XP</label>
+            <div class="xp-bar-container">
+              <div class="xp-bar" id="xpBar" role="progressbar">
+                <span id="xpText">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat"><span class="stat-label">ATK</span><span class="stat-value" id="charAtk">5</span></div>
+            <div class="stat"><span class="stat-label">DEF</span><span class="stat-value" id="charDef">3</span></div>
+            <div class="stat"><span class="stat-label">Gold</span><span class="stat-value" id="charGold">10</span></div>
+          </div>
+
+          <div class="stat-group">
+            <label>Location</label>
+            <div class="location-name" id="charLocation">The Crossroads</div>
+          </div>
+
+          <div class="stat-group">
+            <label>Inventory</label>
+            <div id="inventoryList" class="inventory-list">
+              <div class="empty-state">Empty</div>
+            </div>
+          </div>
+
+          <div class="stat-group">
+            <label>Quests</label>
+            <div id="questList" class="quest-list">
+              <div class="empty-state">No active quests</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dice roll overlay -->
+    <div id="diceOverlay" class="dice-overlay" aria-hidden="true">
+      <div class="dice-result">
+        <div class="dice-value" id="diceValue"></div>
+        <div class="dice-detail" id="diceDetail"></div>
+      </div>
+    </div>
+
+    <!-- NPC speech bubble -->
+    <div id="npcSpeech" class="npc-speech" aria-live="polite" aria-hidden="true">
+      <div class="npc-speech-name" id="npcSpeechName"></div>
+      <div class="npc-speech-text" id="npcSpeechText"></div>
+    </div>
+  </body>
+</html>

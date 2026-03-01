@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+node_modules/
+.DS_Store
+*.log
+backend/app/static/music/*.mp3
+backend/app/static/music/sfx/*.mp3

@@ -1,0 +1,76 @@
+{
+  "name": "The Thornwood",
+  "description": "A once-prosperous kingdom consumed by a creeping curse. Thorny vines strangle the roads, fey creatures haunt the shadows, and the few remaining humans cling to fading hearths.",
+  "locations": {
+    "crossroads": {
+      "name": "The Crossroads",
+      "description": "A windswept junction where the cracked king's road meets a narrow forest path. A leaning signpost points in four directions, its letters half-eaten by moss. Crow feathers litter the ground around a stone shrine to a forgotten god.",
+      "atmosphere": "Thin fog drifts across the road. The distant sound of crows. A faint smell of woodsmoke from the south.",
+      "connections": ["thornwood_edge", "hamlet", "old_bridge", "standing_stones"],
+      "music": "village"
+    },
+    "hamlet": {
+      "name": "Briarhollow Hamlet",
+      "description": "A cluster of stone cottages huddled behind a wall of sharpened stakes. Smoke curls from a single chimney. The tavern's sign — a grinning fox — swings in the wind. Most windows are shuttered, but eyes watch from the gaps.",
+      "atmosphere": "The warmth of the tavern spills into the cold street. Someone is arguing inside. A dog sleeps by the gate.",
+      "connections": ["crossroads", "thornwood_edge", "chapel_ruins"],
+      "music": "tavern"
+    },
+    "thornwood_edge": {
+      "name": "Edge of the Thornwood",
+      "description": "The trees here grow too close together, their branches woven into a canopy that blocks the sky. Thorny vines thick as arms spiral up every trunk. The path narrows to a deer trail marked with old claw scratches. Something watches from the undergrowth.",
+      "atmosphere": "Rustling leaves with no wind. The light turns green and dim. The air tastes of copper and crushed berries.",
+      "connections": ["crossroads", "hamlet", "deep_thornwood", "fairy_market"],
+      "music": "forest"
+    },
+    "deep_thornwood": {
+      "name": "The Deep Thornwood",
+      "description": "No sunlight reaches here. Bioluminescent fungi cast a sickly blue glow on gnarled roots that arch overhead like ribs. The thorns are as long as daggers now, and they seem to turn to follow movement. Whispers drift between the trees — words almost understood.",
+      "atmosphere": "The whispers grow louder, then fall silent. Something large moves in the darkness beyond the fungal light.",
+      "connections": ["thornwood_edge", "witch_hollow", "cursed_castle_approach"],
+      "music": "dungeon"
+    },
+    "fairy_market": {
+      "name": "The Goblin Market",
+      "description": "A clearing that shouldn't exist, lit by lanterns that float without strings. Crooked stalls display impossible wares: bottled laughter, jars of stolen sleep, cloaks woven from shadow. The merchants are small and sharp-toothed, their smiles too wide.",
+      "atmosphere": "Music from nowhere. The smell of honey and something rotten underneath. Prices are never in gold.",
+      "connections": ["thornwood_edge"],
+      "music": "mystery"
+    },
+    "old_bridge": {
+      "name": "The Troll Bridge",
+      "description": "A crumbling stone bridge arcs over a rushing black river. The stones are slick with moss and something that might be old blood. Beneath the bridge, the shadows are too deep, too still. A crude toll sign has been nailed to the railing: 'PAY OR PRAY.'",
+      "atmosphere": "The river roars below. The bridge vibrates underfoot. A low, gravelly breathing echoes from underneath.",
+      "connections": ["crossroads", "cursed_castle_approach"],
+      "music": "mystery"
+    },
+    "witch_hollow": {
+      "name": "The Witch's Hollow",
+      "description": "A sunken clearing where a crooked cottage leans against an enormous dead oak. Bottles hang from every branch, clinking in a wind that touches nothing else. The door is open. Smoke rises from within, carrying the scent of herbs and something older.",
+      "atmosphere": "The bottles contain tiny lights — or tiny things that move. The smoke forms shapes briefly before dissolving.",
+      "connections": ["deep_thornwood"],
+      "music": "mystery"
+    },
+    "cursed_castle_approach": {
+      "name": "The Briarthrone Approach",
+      "description": "The castle rises from a sea of thorns, its towers wrapped in vines so thick the original stone is barely visible. The main gate hangs open like a broken jaw. Rose petals — black as coal — drift down from somewhere above. This was once the seat of a king.",
+      "atmosphere": "The vines pulse faintly, like veins. The air is heavy and sweet, like overripe fruit. Distant, discordant music echoes from inside.",
+      "connections": ["deep_thornwood", "old_bridge"],
+      "music": "boss"
+    },
+    "chapel_ruins": {
+      "name": "The Ruined Chapel",
+      "description": "A roofless stone chapel, its pews rotted to splinters. Wildflowers grow through the cracked floor in defiant beauty. The altar still stands, bearing a tarnished silver chalice. At night, they say, the candles light themselves.",
+      "atmosphere": "Peaceful despite the ruin. Birdsong. The flowers smell impossibly sweet. Something sacred lingers here.",
+      "connections": ["hamlet"],
+      "music": "village"
+    },
+    "standing_stones": {
+      "name": "The Whispering Stones",
+      "description": "Seven tall stones arranged in a circle on a windswept hilltop. Each stone is carved with spiraling symbols that seem to move in peripheral vision. The grass within the circle is always green, even in winter. The stones hum when touched.",
+      "atmosphere": "Wind that carries fragments of voices. The stars seem brighter here. Time feels uncertain.",
+      "connections": ["crossroads"],
+      "music": "mystery"
+    }
+  }
+}

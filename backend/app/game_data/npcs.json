@@ -1,0 +1,124 @@
+{
+  "npcs": {
+    "marta": {
+      "name": "Marta the Innkeeper",
+      "role": "Tavern owner, information broker",
+      "location": "hamlet",
+      "description": "A broad-shouldered woman with iron-grey hair and knowing eyes. She survived the curse by being tougher than anything the Thornwood sent. Her ale is strong and her gossip is stronger.",
+      "personality": "Gruff but warm. Protective of the hamlet. Speaks plainly. Doesn't suffer fools. Knows everyone's business.",
+      "voice": {
+        "description": "A deep, warm, maternal woman's voice with a slight rasp. Working-class accent. Speaks with authority and dry humor.",
+        "seed": 2847
+      },
+      "dialogue_style": "Short, direct sentences. Occasional dark humor. Calls everyone 'love' or 'fool' depending on mood."
+    },
+    "pip": {
+      "name": "Pip",
+      "role": "Orphan thief, potential companion",
+      "location": "hamlet",
+      "description": "A skinny child of indeterminate age with too-bright eyes and quick fingers. Pip knows every shadow in Briarhollow and every secret passage in the Thornwood's edge.",
+      "personality": "Mischievous, streetwise, secretly lonely. Fiercely loyal once trust is earned. Lies about their age.",
+      "voice": {
+        "description": "A young, bright, androgynous child's voice. Quick-speaking, slightly breathless, with mischievous energy.",
+        "seed": 1523
+      },
+      "dialogue_style": "Fast, excited speech. Asks too many questions. Slang and invented words."
+    },
+    "grimjaw": {
+      "name": "Grimjaw",
+      "role": "Troll toll-keeper, neutral obstacle",
+      "location": "old_bridge",
+      "description": "An ancient troll the color of river stone, covered in moss and barnacles. One eye is milky white. He's been collecting tolls since before the curse, and he'll be collecting long after.",
+      "personality": "Patient, philosophical, surprisingly articulate. Not evil — just old and hungry. Respects cleverness over violence.",
+      "voice": {
+        "description": "A very deep, slow, rumbling bass voice like stones grinding together. Ancient and unhurried. Each word deliberate.",
+        "seed": 7712
+      },
+      "dialogue_style": "Slow, ponderous speech. References things from centuries ago casually. Enjoys riddles."
+    },
+    "thornweaver": {
+      "name": "The Thornweaver",
+      "role": "Witch, quest-giver, morally grey ally",
+      "location": "witch_hollow",
+      "description": "An ageless woman whose skin has the texture of bark and whose hair moves like ivy. She claims to be the Thornwood's keeper — or its prisoner. The truth may be both.",
+      "personality": "Cryptic, amused, dangerous. Speaks in riddles and half-truths. Genuinely wants to help but her help always has a price.",
+      "voice": {
+        "description": "An ethereal, whispery woman's voice that seems to come from multiple directions. Melodic but unsettling. Ancient.",
+        "seed": 4433
+      },
+      "dialogue_style": "Riddles and metaphors. Never gives a straight answer. Laughs at unexpected moments."
+    },
+    "sir_aldric": {
+      "name": "Sir Aldric the Last",
+      "role": "Cursed knight, tragic figure",
+      "location": "cursed_castle_approach",
+      "description": "The last knight of the Briarthrone, still wearing rusted armor fused to his body by thorns. He patrols the castle approach endlessly, unable to enter, unable to leave. He remembers the king, and the day the roses turned black.",
+      "personality": "Noble, haunted, desperate for purpose. Honorable to a fault. Speaks of duty while barely holding together.",
+      "voice": {
+        "description": "A tired, noble man's voice, hollow and echoing as if speaking from inside a helm. Formal speech patterns, occasionally breaking with emotion.",
+        "seed": 3301
+      },
+      "dialogue_style": "Formal, knightly speech. 'My lord/lady.' Trails off mid-sentence when remembering the past."
+    },
+    "nixie": {
+      "name": "Nixie Quickfingers",
+      "role": "Goblin merchant, trickster",
+      "location": "fairy_market",
+      "description": "A goblin no taller than a child's knee, wearing a coat made of moth wings and a hat of acorn caps. Their merchandise is wonderful and terrible in equal measure. Every deal is fair — by fey standards.",
+      "personality": "Gleeful, cunning, delighted by mortal confusion. Genuinely believes their deals are fair. Collects interesting stories as currency.",
+      "voice": {
+        "description": "A high-pitched, rapid, impish voice crackling with glee. Slightly squeaky. Speaks in a singsong cadence.",
+        "seed": 888
+      },
+      "dialogue_style": "Rhyming couplets. Talks about themselves in third person sometimes. Giggles between sentences."
+    },
+    "father_moss": {
+      "name": "Father Moss",
+      "role": "Hermit priest, healer",
+      "location": "chapel_ruins",
+      "description": "An old man in robes more patch than cloth, tending flowers in the ruined chapel. Moss grows in his beard and small creatures nest in his pockets. The last priest of a forgotten faith, he still believes.",
+      "personality": "Gentle, serene, occasionally profound. Heals freely but speaks in parables. The chapel is the one place the curse cannot touch.",
+      "voice": {
+        "description": "A gentle, elderly man's voice, soft and warm like a candle flame. Calm and measured, with quiet authority.",
+        "seed": 5520
+      },
+      "dialogue_style": "Parables and blessings. Gentle corrections. Asks about the soul, not the sword."
+    },
+    "echo": {
+      "name": "Echo",
+      "role": "Spirit of the stones, mysterious guide",
+      "location": "standing_stones",
+      "description": "Not a person but a presence — a voice that speaks from the stones when the wind blows right. Echo claims to be the memory of someone who stood in the circle too long. They know things they shouldn't.",
+      "personality": "Melancholy, wise, fragmentary. Speaks in broken phrases. Occasionally reveals crucial information wrapped in sorrow.",
+      "voice": {
+        "description": "A ghostly, reverberating androgynous voice that seems to layer over itself. Distant and echoing, as if speaking from the bottom of a well.",
+        "seed": 6060
+      },
+      "dialogue_style": "Fragmented sentences. Repeats the last word of the player's sentences. Trails into silence."
+    },
+    "bramble": {
+      "name": "Bramble",
+      "role": "Corrupted forest guardian, mini-boss",
+      "location": "deep_thornwood",
+      "description": "Once a dryad protector of the forest, now twisted by the curse into something half-tree, half-predator. Branches grow from its back like antlers, and its eyes glow amber. It guards the path to the castle.",
+      "personality": "Territorial, in pain, not entirely lost. Can be reasoned with if the player shows respect for the forest. Attacks if provoked.",
+      "voice": {
+        "description": "A deep, creaking voice like bending wood. Slow and strained, as if each word is painful. Occasionally punctuated by cracking sounds.",
+        "seed": 9100
+      },
+      "dialogue_style": "Short, strained sentences. Speaks of the forest in present tense, the curse as a wound."
+    },
+    "the_briar_king": {
+      "name": "The Briar King",
+      "role": "Final boss, cursed ruler",
+      "location": "cursed_castle_approach",
+      "description": "The king who made a deal with the fey and paid for it. Now more thorn than man, seated on a throne of living briars. His crown has grown into his skull. He didn't choose this — but he chose what led to it.",
+      "personality": "Regal, tormented, lucid in flashes. The curse speaks through him sometimes. In his clear moments, he begs for release.",
+      "voice": {
+        "description": "A commanding, aristocratic voice distorted by pain and something inhuman. Shifts between regal clarity and guttural snarling mid-sentence.",
+        "seed": 1666
+      },
+      "dialogue_style": "Alternates between kingly decrees and anguished pleas. Uses 'we' (royal we / curse speaking through him)."
+    }
+  }
+}

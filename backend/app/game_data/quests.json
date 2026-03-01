@@ -1,0 +1,69 @@
+{
+  "quests": {
+    "thornwood_investigation": {
+      "name": "The Spreading Blight",
+      "description": "Marta has noticed the thorns are growing faster — reaching the hamlet walls. Something in the Deep Thornwood is accelerating the curse. Investigate and find the source.",
+      "objectives": [
+        "Speak to Marta about the spreading thorns",
+        "Enter the Deep Thornwood",
+        "Find evidence of the curse's source",
+        "Report back to Marta"
+      ],
+      "reward_xp": 100,
+      "reward_items": ["healing_draught"],
+      "given_by": "marta"
+    },
+    "troll_riddle": {
+      "name": "The Bridge Keeper's Bargain",
+      "description": "Grimjaw the troll demands a toll to cross his bridge — but not in gold. He wants something far more interesting: the answer to his riddle. Fail, and you're dinner.",
+      "objectives": [
+        "Approach the Troll Bridge",
+        "Listen to Grimjaw's riddle",
+        "Answer correctly (or find another way across)"
+      ],
+      "reward_xp": 75,
+      "reward_items": [],
+      "given_by": "grimjaw"
+    },
+    "witch_bargain": {
+      "name": "The Thornweaver's Price",
+      "description": "The Thornweaver knows how to break the curse, but her help requires a task: retrieve a silver chalice from the Ruined Chapel. Simple enough — except the chapel's guardian may not agree.",
+      "objectives": [
+        "Find the Thornweaver in her hollow",
+        "Learn what she needs",
+        "Retrieve the Silver Chalice from the Ruined Chapel",
+        "Return the chalice to the Thornweaver"
+      ],
+      "reward_xp": 150,
+      "reward_items": ["thornward_amulet"],
+      "given_by": "thornweaver"
+    },
+    "lost_knight": {
+      "name": "The Knight's Vigil",
+      "description": "Sir Aldric has patrolled the castle approach for years, unable to enter or leave. He believes a blessing from Father Moss could break his binding. But the path between them is through the Deep Thornwood.",
+      "objectives": [
+        "Speak with Sir Aldric",
+        "Travel to the Ruined Chapel",
+        "Convince Father Moss to create a blessing",
+        "Bring the blessing to Sir Aldric"
+      ],
+      "reward_xp": 200,
+      "reward_items": ["aldrics_shield"],
+      "given_by": "sir_aldric"
+    },
+    "break_the_curse": {
+      "name": "The Briar Crown",
+      "description": "The ultimate quest: confront the Briar King and end the curse that devours the Thornwood. But killing the king may not be the answer — he was a victim too. The choice will define the world's fate.",
+      "objectives": [
+        "Gather allies and knowledge about the curse",
+        "Find a way past Bramble in the Deep Thornwood",
+        "Reach the Briarthrone",
+        "Confront the Briar King",
+        "Choose: destroy the crown, free the king, or claim the power"
+      ],
+      "reward_xp": 500,
+      "reward_items": [],
+      "given_by": null
+    }
+  }
+}
