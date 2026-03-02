@@ -822,3 +822,139 @@ def modify_npc_relationship(npc_id: str, disposition_change: int,
         "change": disposition_change,
         "reason": reason,
     })
+
+
+# --- Gesture Battles ---
+
+# Theater event queue for gesture results (polled by frontend via WS events)
+_theater_events: dict[str, list[dict]] = {}
+
+
+def get_theater_events(session_id: str) -> list[dict]:
+    """Pop pending theater events for a session."""
+    return _theater_events.pop(session_id, [])
+
+
+def resolve_gesture_battle(
+    battle_type: str,
+    player_gesture: str,
+    session_id: str,
+    context: str = "",
+) -> str:
+    """Resolve a physical gesture battle between the player and the DM.
+
+    The player shows a gesture via camera (recognized by Gemini vision).
+    Call this tool with what you see in the player's gesture to resolve the battle.
+    Use 1-2 times per combat encounter to add physical interactivity.
+
+    Args:
+        battle_type: One of: rps (rock-paper-scissors), odd_even (finger count),
+                     thumbs (up or down), gesture_check (free-form DM judgment)
+        player_gesture: What the player showed (e.g. "rock", "3 fingers", "thumbs up",
+                        or free-form description for gesture_check)
+        session_id: Current game session ID
+        context: Narrative context (e.g. "combat bonus attack", "persuasion check")
+
+    Returns:
+        JSON with battle result, winner, and any combat effects
+    """
+    session_id = resolve_session_id(session_id)
+    state = _get_state(session_id)
+    player_gesture = player_gesture.lower().strip()
+
+    result = {
+        "battle_type": battle_type,
+        "player_gesture": player_gesture,
+        "context": context,
+    }
+
+    if battle_type == "rps":
+        choices = ["rock", "paper", "scissors"]
+        dm_choice = random.choice(choices)
+        result["dm_gesture"] = dm_choice
+
+        # Normalize player gesture
+        pg = player_gesture
+        for c in choices:
+            if c in pg:
+                pg = c
+                break
+
+        if pg == dm_choice:
+            result["outcome"] = "draw"
+            result["message"] = "A draw! The fates are undecided."
+            result["combat_bonus"] = 0
+        elif (pg == "rock" and dm_choice == "scissors") or \
+             (pg == "paper" and dm_choice == "rock") or \
+             (pg == "scissors" and dm_choice == "paper"):
+            result["outcome"] = "player_wins"
+            result["message"] = "Victory! The gesture favors you."
+            result["combat_bonus"] = random.randint(2, 5)
+        else:
+            result["outcome"] = "dm_wins"
+            result["message"] = "The darkness prevails! A penalty befalls you."
+            result["combat_bonus"] = -random.randint(1, 3)
+
+    elif battle_type == "odd_even":
+        # Count fingers — odd = player wins
+        digits = [c for c in player_gesture if c.isdigit()]
+        finger_count = int(digits[0]) if digits else len(player_gesture.split())
+        is_odd = finger_count % 2 == 1
+        result["finger_count"] = finger_count
+        result["is_odd"] = is_odd
+
+        if is_odd:
+            result["outcome"] = "player_wins"
+            result["message"] = f"{finger_count} fingers — odd! Fortune smiles on you."
+            result["combat_bonus"] = random.randint(1, 4)
+        else:
+            result["outcome"] = "dm_wins"
+            result["message"] = f"{finger_count} fingers — even! The shadows grow bolder."
+            result["combat_bonus"] = -random.randint(1, 3)
+
+    elif battle_type == "thumbs":
+        is_up = "up" in player_gesture or "thumbs up" in player_gesture
+        result["thumbs_up"] = is_up
+
+        if is_up:
+            result["outcome"] = "player_wins"
+            result["message"] = "Thumbs up! Courage bolsters your spirit."
+            result["combat_bonus"] = random.randint(2, 4)
+        else:
+            result["outcome"] = "dm_wins"
+            result["message"] = "Thumbs down! Dread takes hold."
+            result["combat_bonus"] = -random.randint(1, 3)
+
+    elif battle_type == "gesture_check":
+        # Free-form — DM decides based on context, 60/40 player favor
+        player_wins = random.random() < 0.6
+        result["outcome"] = "player_wins" if player_wins else "dm_wins"
+        result["message"] = "The gesture is accepted!" if player_wins else "The gesture fails to convince."
+        result["combat_bonus"] = random.randint(1, 3) if player_wins else -random.randint(1, 2)
+
+    else:
+        return json.dumps({"error": f"Unknown battle_type: {battle_type}"})
+
+    # Apply combat bonus if in combat
+    bonus = result.get("combat_bonus", 0)
+    if state.player.combat.active and bonus != 0:
+        if bonus > 0:
+            result["effect"] = f"+{bonus} bonus damage on next attack"
+        else:
+            result["effect"] = f"{bonus} HP penalty"
+            state.player.hp = max(1, state.player.hp + bonus)
+            result["player_hp"] = state.player.hp
+
+    state.events_log.append(
+        f"Gesture battle ({battle_type}): {player_gesture} → {result['outcome']} "
+        f"(bonus: {bonus}, context: {context})"
+    )
+    _save_state(session_id)
+
+    # Push theater event for frontend animation
+    _theater_events.setdefault(session_id, []).append({
+        "type": "gesture_battle_result",
+        "data": result,
+    })
+
+    return json.dumps(result)

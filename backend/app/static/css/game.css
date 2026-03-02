@@ -807,6 +807,133 @@ body {
   margin-left: auto;
 }
 
+/* Camera overlay */
+.camera-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(10, 10, 15, 0.95);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.camera-overlay.show {
+  display: flex;
+}
+
+.camera-hint {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--accent-gold);
+  font-style: italic;
+  text-align: center;
+  max-width: 480px;
+}
+
+.camera-viewfinder {
+  max-width: 480px;
+  max-height: 60vh;
+  width: 100%;
+  border: 2px solid var(--accent-gold);
+  border-radius: var(--radius-lg);
+  background: #000;
+  object-fit: cover;
+}
+
+.camera-snap-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-gold);
+  background: transparent;
+  color: var(--accent-gold);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  animation: adventurePulse 2s ease-in-out infinite;
+}
+
+.camera-snap-btn:hover {
+  background: rgba(201, 168, 76, 0.2);
+}
+
+.camera-snap-btn:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 4px;
+}
+
+@keyframes adventurePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(201, 168, 76, 0); }
+}
+
+.camera-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-interactive);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 151;
+}
+
+.camera-close-btn:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.camera-close-btn:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+.camera-btn {
+  /* Inherits from .audio-controls button */
+}
+
+/* Gesture prompt */
+.gesture-prompt {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--accent-gold);
+  text-shadow: 0 0 30px rgba(201, 168, 76, 0.6), 0 2px 8px rgba(0,0,0,0.8);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.gesture-prompt.show {
+  animation: gesturePulse 3s ease-in-out forwards;
+}
+
+@keyframes gesturePulse {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  15% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+  25% { transform: translateX(-50%) scale(1); }
+  75% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .game-layout { flex-direction: column; }
@@ -817,4 +944,6 @@ body {
   }
   .transcript-panel { border-right: none; }
   .scene-container { height: 20vh; min-height: 120px; }
+  .camera-viewfinder { max-width: 95vw; max-height: 50vh; }
+  .gesture-prompt { font-size: 1.4rem; }
 }

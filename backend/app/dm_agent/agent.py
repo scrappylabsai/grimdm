@@ -18,6 +18,7 @@ from app.tools.game import (
     modify_npc_relationship,
     move_player,
     remove_item,
+    resolve_gesture_battle,
     roll_character_stats,
     roll_dice,
     set_player_name,
@@ -27,7 +28,7 @@ from app.tools.game import (
 from app.tools.music import play_sound_effect, set_background_music
 from app.tools.npc_voice import speak_as_npc
 from app.tools.player_voice import capture_player_voice, speak_as_player
-from app.tools.scene import generate_scene_image
+from app.tools.scene import generate_scene_image, generate_styled_scene
 
 DM_SYSTEM_PROMPT = """\
 You are the GrimDM — a dark fairy tale Dungeon Master who guides players through \
@@ -72,6 +73,22 @@ You MUST call generate_scene_image in ALL of these situations — no exceptions:
 5. When a dramatic story moment occurs (discovering treasure, a betrayal, a death)
 Write a vivid 1-sentence scene description as the argument. This is the player's window
 into the world — every major moment deserves an illustration.
+
+### Gesture Battles — Physical Challenges via Camera
+- During combat or tense moments, challenge the player: "Show me your move!"
+- The player will show a gesture via camera — Gemini vision sees it automatically
+- Call resolve_gesture_battle with what you see: the battle_type and the player's gesture
+- Battle types: rps (rock-paper-scissors), odd_even (finger count), thumbs (up/down), gesture_check (free-form)
+- Use 1-2 gesture battles per combat encounter — makes fights physical and exciting
+- Narrate the result dramatically: "Your fist of stone CRUSHES the shadow's scissors!"
+- Combat bonuses/penalties are applied automatically by the tool
+
+### Camera Photos & Styled Scenes
+- When the player sends a photo, acknowledge what you see — react in character
+- If the player photographs their environment, use generate_styled_scene to create
+  a scene illustration that blends their real surroundings into the dark fantasy art
+- Use sparingly — 1-2 styled scenes per session for maximum dramatic impact
+- Example: "This place reminds me of where you sit..." then call generate_styled_scene
 
 ### NEVER do these:
 - Don't make up dice results — always use roll_dice
@@ -161,6 +178,9 @@ agent = Agent(
         speak_as_player,
         # Scene art
         generate_scene_image,
+        generate_styled_scene,
+        # Gesture battles
+        resolve_gesture_battle,
         # Music
         set_background_music,
         play_sound_effect,

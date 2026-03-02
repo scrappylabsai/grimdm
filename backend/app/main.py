@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from google.adk.agents.live_request_queue import LiveRequestQueue
@@ -80,6 +81,28 @@ async def poll_scene_images(session_id: str):
     from app.tools.scene import get_pending_images
     images = get_pending_images(session_id)
     return {"images": images}
+
+
+class PlayerPhotoRequest(BaseModel):
+    session_id: str
+    image_base64: str
+    mime_type: str = "image/jpeg"
+
+
+@app.post("/api/store-player-photo")
+async def store_player_photo_endpoint(req: PlayerPhotoRequest):
+    """Store a player's camera photo for styled scene generation."""
+    from app.tools.scene import store_player_photo
+    store_player_photo(req.session_id, req.image_base64, req.mime_type)
+    return {"status": "ok"}
+
+
+@app.get("/api/theater-events/{session_id}")
+async def poll_theater_events(session_id: str):
+    """Poll for pending theater events (gesture battles, etc.)."""
+    from app.tools.game import get_theater_events
+    events = get_theater_events(session_id)
+    return {"events": events}
 
 
 @app.get("/api/npc-audio/{session_id}")

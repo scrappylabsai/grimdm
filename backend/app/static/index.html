@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GrimDM — Voice AI Dungeon Master</title>
-    <link rel="stylesheet" href="/static/css/game.css?v=18">
-    <script src="/static/js/app.js?v=18" type="module"></script>
+    <link rel="stylesheet" href="/static/css/game.css?v=21">
+    <script src="/static/js/app.js?v=21" type="module"></script>
   </head>
 
   <body>
@@ -57,6 +57,13 @@
                 <line x1="8" y1="23" x2="16" y2="23"/>
               </svg>
               <span>Speak</span>
+            </button>
+            <button type="button" id="cameraBtn" class="camera-btn" aria-label="Open camera">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span>Camera</span>
             </button>
             <label class="music-slider-control" aria-label="Music volume">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -152,6 +159,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Camera overlay -->
+    <div id="cameraOverlay" class="camera-overlay" aria-hidden="true">
+      <button id="cameraCloseBtn" class="camera-close-btn" aria-label="Close camera">&times;</button>
+      <div class="camera-hint" id="cameraHint">Snap a photo for the DM</div>
+      <video id="cameraViewfinder" class="camera-viewfinder" autoplay playsinline></video>
+      <button id="cameraSnapBtn" class="camera-snap-btn" aria-label="Take photo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+      </button>
+      <!-- Fallback file input for denied camera -->
+      <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none">
+    </div>
+
+    <!-- Gesture prompt -->
+    <div id="gesturePrompt" class="gesture-prompt" aria-hidden="true"></div>
 
     <!-- Dice roll overlay -->
     <div id="diceOverlay" class="dice-overlay" aria-hidden="true">

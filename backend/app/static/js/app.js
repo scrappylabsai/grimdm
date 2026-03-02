@@ -34,6 +34,8 @@ let isAudioActive = false;
 let dmVoice = null; // { ctx, playerNode, gainNode }
 let micRecorder = null;
 let hasConnectedOnce = false;
+let cameraStream = null;
+let gestureBattleMode = false;
 
 // Transcript state
 let currentMsgId = null;
@@ -65,6 +67,14 @@ const npcSpeechName = document.getElementById('npcSpeechName');
 const npcSpeechText = document.getElementById('npcSpeechText');
 const dmIndicator = document.getElementById('dmIndicator');
 const dmIndicatorText = document.getElementById('dmIndicatorText');
+const cameraOverlay = document.getElementById('cameraOverlay');
+const cameraViewfinder = document.getElementById('cameraViewfinder');
+const cameraSnapBtn = document.getElementById('cameraSnapBtn');
+const cameraCloseBtn = document.getElementById('cameraCloseBtn');
+const cameraHint = document.getElementById('cameraHint');
+const cameraFileInput = document.getElementById('cameraFileInput');
+const cameraBtn = document.getElementById('cameraBtn');
+const gesturePrompt = document.getElementById('gesturePrompt');
 
 // Canvas instrument elements
 const hpStripCanvas = document.getElementById('hpStrip');
@@ -462,7 +472,12 @@ function handleToolResult(funcResponse) {
       }
       break;
     case 'generate_scene_image':
+    case 'generate_styled_scene':
       // Images arrive via polling (/api/scene-images); tool result is just confirmation
+      break;
+    case 'resolve_gesture_battle':
+      showGestureResult(data);
+      if (data.effect) addSystemMessage(data.effect);
       break;
     case 'set_background_music':
       if (data.track_url) setMusic(data.track_url);
@@ -739,6 +754,137 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer;
 }
 
+// --- Camera ---
+
+function openCamera(hint = 'Snap a photo for the DM') {
+  cameraHint.textContent = hint;
+  // Try getUserMedia first
+  if (navigator.mediaDevices?.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        cameraStream = stream;
+        cameraViewfinder.srcObject = stream;
+        cameraViewfinder.style.display = '';
+        cameraOverlay.classList.add('show');
+        cameraOverlay.setAttribute('aria-hidden', 'false');
+      })
+      .catch(() => {
+        // Camera denied — fall back to file input
+        cameraViewfinder.style.display = 'none';
+        cameraFileInput.click();
+      });
+  } else {
+    // No getUserMedia — file input fallback
+    cameraViewfinder.style.display = 'none';
+    cameraFileInput.click();
+  }
+}
+
+function closeCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  cameraViewfinder.srcObject = null;
+  cameraOverlay.classList.remove('show');
+  cameraOverlay.setAttribute('aria-hidden', 'true');
+  gestureBattleMode = false;
+}
+
+function captureFromViewfinder() {
+  const canvas = document.createElement('canvas');
+  canvas.width = cameraViewfinder.videoWidth || 640;
+  canvas.height = cameraViewfinder.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(cameraViewfinder, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  const base64 = dataUrl.split(',')[1];
+  sendCameraImage(base64, 'image/jpeg');
+  closeCamera();
+}
+
+function sendCameraImage(base64, mime) {
+  // Send via WebSocket for Gemini vision
+  if (websocket?.readyState === WebSocket.OPEN) {
+    websocket.send(JSON.stringify({ type: 'image', data: base64, mimeType: mime }));
+  }
+  // Also store server-side for style reference
+  fetch('/api/store-player-photo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId, image_base64: base64, mime_type: mime }),
+  }).catch(e => console.warn('[GrimDM] Failed to store player photo:', e));
+
+  addSystemMessage('Photo sent to the DM');
+}
+
+// Camera button click
+cameraBtn?.addEventListener('click', () => openCamera());
+
+// Snap button
+cameraSnapBtn?.addEventListener('click', () => {
+  if (cameraStream) {
+    captureFromViewfinder();
+  }
+});
+
+// Close button
+cameraCloseBtn?.addEventListener('click', closeCamera);
+
+// File input fallback
+cameraFileInput?.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    sendCameraImage(base64, file.type || 'image/jpeg');
+    // Show overlay briefly then close
+    cameraOverlay.classList.add('show');
+    setTimeout(() => closeCamera(), 500);
+  };
+  reader.readAsDataURL(file);
+  cameraFileInput.value = '';
+});
+
+// --- Gesture UI ---
+
+function showGesturePrompt(text) {
+  gesturePrompt.textContent = text;
+  gesturePrompt.classList.add('show');
+  gesturePrompt.setAttribute('aria-hidden', 'false');
+  // Auto-hide after animation (3s)
+  setTimeout(() => {
+    gesturePrompt.classList.remove('show');
+    gesturePrompt.setAttribute('aria-hidden', 'true');
+  }, 3000);
+}
+
+function showGestureResult(data) {
+  // Reuse dice overlay for gesture results
+  const won = data.outcome === 'player_wins';
+  const draw = data.outcome === 'draw';
+  const emoji = won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!';
+  diceValue.textContent = emoji;
+  diceValue.className = 'dice-value';
+  if (won) diceValue.classList.add('crit');
+  if (!won && !draw) diceValue.classList.add('fumble');
+
+  let detail = data.player_gesture;
+  if (data.dm_gesture) detail += ` vs ${data.dm_gesture}`;
+  if (data.combat_bonus) {
+    detail += ` (${data.combat_bonus > 0 ? '+' : ''}${data.combat_bonus})`;
+  }
+  diceDetail.textContent = detail;
+
+  diceOverlay.classList.add('show');
+  diceOverlay.setAttribute('aria-hidden', 'false');
+  setTimeout(() => {
+    diceOverlay.classList.remove('show');
+    diceOverlay.setAttribute('aria-hidden', 'true');
+  }, 3000);
+}
+
 // --- Send Message ---
 
 // Ensure DM voice playback is initialized (requires user gesture)
@@ -948,11 +1094,12 @@ function startSceneImagePolling() {
   if (sceneImagePollTimer) return;
   console.log(`[GrimDM] Starting asset polling for session: ${sessionId}`);
   sceneImagePollTimer = setInterval(async () => {
-    // Poll scene images and NPC audio in parallel
+    // Poll scene images, NPC audio, and theater events in parallel
     try {
-      const [imgResp, audioResp] = await Promise.all([
+      const [imgResp, audioResp, theaterResp] = await Promise.all([
         fetch(`/api/scene-images/${sessionId}`).catch(() => null),
         fetch(`/api/npc-audio/${sessionId}`).catch(() => null),
+        fetch(`/api/theater-events/${sessionId}`).catch(() => null),
       ]);
 
       if (imgResp?.ok) {
@@ -971,6 +1118,18 @@ function startSceneImagePolling() {
           console.log(`[GrimDM] Poll received ${data.audio.length} NPC audio(s)`);
           for (const npc of data.audio) {
             await handleNPCAudioDelivery(npc);
+          }
+        }
+      }
+
+      if (theaterResp?.ok) {
+        const data = await theaterResp.json();
+        if (data.events && data.events.length > 0) {
+          for (const event of data.events) {
+            if (event.type === 'gesture_battle_result') {
+              showGestureResult(event.data);
+              playSFX('/static/sfx/sword_clash.mp3');
+            }
           }
         }
       }

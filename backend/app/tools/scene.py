@@ -26,6 +26,23 @@ STYLE_PREFIX = (
 # Pending images keyed by session_id — polled by frontend
 _pending_images: dict[str, list[dict]] = {}
 
+# Player photos keyed by session_id — used as style references
+_player_photos: dict[str, dict] = {}
+
+
+def store_player_photo(session_id: str, image_base64: str, mime_type: str) -> None:
+    """Store a player's camera photo for style reference."""
+    _player_photos[session_id] = {
+        "image_base64": image_base64,
+        "mime_type": mime_type,
+    }
+    logger.info(f"Stored player photo for session={session_id}, mime={mime_type}")
+
+
+def get_player_photo(session_id: str) -> dict | None:
+    """Retrieve stored player photo for style reference."""
+    return _player_photos.get(session_id)
+
 
 def get_pending_images(session_id: str) -> list[dict]:
     """Pop all pending images for a session."""
@@ -103,3 +120,102 @@ async def _generate_image_bg(description: str, session_id: str) -> None:
 
     except Exception as e:
         logger.error(f"Scene generation error: {e}")
+
+
+async def generate_styled_scene(description: str, session_id: str) -> str:
+    """Generate a scene illustration styled after the player's real environment.
+
+    Uses the player's most recent camera photo as a style reference to blend
+    their real-world surroundings into the dark fantasy scene art. Falls back
+    to standard scene generation if no photo is available.
+
+    Call this when the player has shared a photo of their environment and you
+    want to create a scene that reflects their real-world setting in the game art.
+    Use sparingly — 1-2 per session for maximum dramatic impact.
+
+    Args:
+        description: Scene description (e.g. "A crumbling throne room echoing the player's world")
+        session_id: Current game session ID
+
+    Returns:
+        Confirmation that styled image is being generated
+    """
+    session_id = resolve_session_id(session_id)
+    photo = get_player_photo(session_id)
+    if not photo:
+        # No player photo — fall back to standard generation
+        asyncio.create_task(_generate_image_bg(description, session_id))
+        return json.dumps({
+            "status": "generating",
+            "styled": False,
+            "description": description,
+            "message": "No player photo available — generating standard scene.",
+        })
+
+    asyncio.create_task(_generate_styled_image_bg(description, session_id, photo))
+    return json.dumps({
+        "status": "generating",
+        "styled": True,
+        "description": description,
+        "message": "Painting a scene inspired by the player's world...",
+    })
+
+
+async def _generate_styled_image_bg(
+    description: str, session_id: str, photo: dict
+) -> None:
+    """Background task: generate style-referenced image and queue for delivery."""
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+
+        client = genai.Client()
+        prompt = STYLE_PREFIX + description
+
+        # Decode player photo for style reference
+        photo_bytes = base64.b64decode(photo["image_base64"])
+
+        response = await client.aio.models.edit_image(
+            model="imagen-3.0-capability-001",
+            prompt=prompt,
+            reference_images=[
+                genai_types.RawReferenceImage(
+                    reference_id=1,
+                    reference_image=genai_types.Image(
+                        image_bytes=photo_bytes,
+                    ),
+                ),
+            ],
+            config=genai_types.EditImageConfig(
+                edit_mode="EDIT_MODE_STYLE",
+                number_of_images=1,
+                output_mime_type="image/jpeg",
+            ),
+        )
+
+        if response.generated_images:
+            img = response.generated_images[0]
+            pil_img = Image.open(io.BytesIO(img.image.image_bytes))
+            pil_img = pil_img.convert("RGB")
+            if pil_img.width > 1280:
+                ratio = 1280 / pil_img.width
+                pil_img = pil_img.resize(
+                    (1280, int(pil_img.height * ratio)), Image.LANCZOS
+                )
+            buf = io.BytesIO()
+            pil_img.save(buf, format="JPEG", quality=80)
+            img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            logger.info(f"Styled scene image ready: {len(buf.getvalue())} bytes JPEG")
+
+            _pending_images.setdefault(session_id, []).append({
+                "image_base64": img_b64,
+                "image_mime": "image/jpeg",
+                "description": description,
+            })
+        else:
+            logger.warning(f"Styled scene blocked by safety filter, falling back: {description}")
+            await _generate_image_bg(description, session_id)
+
+    except Exception as e:
+        logger.error(f"Styled scene generation error: {e}, falling back to standard")
+        await _generate_image_bg(description, session_id)
