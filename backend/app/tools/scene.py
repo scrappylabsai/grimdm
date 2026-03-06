@@ -13,9 +13,22 @@ import os
 
 from PIL import Image
 
+from pathlib import Path
 from app.session_context import resolve_session_id
 
 logger = logging.getLogger(__name__)
+
+
+# Pre-rendered location images (served instantly, no API call)
+_LOCATION_IMAGE_DIR = Path(__file__).parent.parent / "static" / "images" / "locations"
+
+def _get_cached_location_image(location_id: str) -> str | None:
+    """Return base64 JPEG if a pre-rendered image exists for this location."""
+    path = _LOCATION_IMAGE_DIR / f"{location_id}.jpg"
+    if path.exists():
+        import base64 as _b64
+        return _b64.b64encode(path.read_bytes()).decode()
+    return None
 
 STYLE_PREFIX = (
     "Dark fairy tale illustration, gothic fantasy art style, "
@@ -66,9 +79,33 @@ async def generate_scene_image(description: str, session_id: str) -> str:
     Returns:
         Confirmation that image is being generated (image delivered separately to player)
     """
-    # Override Gemini's hallucinated session_id with the real one
     session_id = resolve_session_id(session_id)
-    # Fire and forget — generate in background so DM keeps talking
+
+    # Check if we have a pre-rendered image for a known location
+    # Description often matches location name — check for location_id substring
+    cached_b64 = None
+    desc_lower = description.lower()
+    for loc_id in ["crossroads", "hamlet", "thornwood_edge", "deep_thornwood",
+                   "fairy_market", "old_bridge", "witch_hollow",
+                   "cursed_castle_approach", "chapel_ruins", "standing_stones"]:
+        loc_key = loc_id.replace("_", " ")
+        if loc_key in desc_lower or loc_id in desc_lower:
+            cached_b64 = _get_cached_location_image(loc_id)
+            if cached_b64:
+                logger.info(f"Serving pre-rendered image for location: {loc_id}")
+                _pending_images.setdefault(session_id, []).append({
+                    "image_base64": cached_b64,
+                    "image_mime": "image/jpeg",
+                    "description": description,
+                })
+                return json.dumps({
+                    "status": "ready",
+                    "description": description,
+                    "message": "Scene illustration ready.",
+                    "cached": True,
+                })
+
+    # No cached image — generate via Imagen 4 in background
     asyncio.create_task(_generate_image_bg(description, session_id))
     return json.dumps({
         "status": "generating",

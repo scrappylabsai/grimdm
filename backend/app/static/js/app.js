@@ -229,7 +229,7 @@ function connectWebSocket() {
     reconnectTimer = setTimeout(() => {
       statusDot.classList.remove('connected');
       statusText.textContent = 'Reconnecting...';
-    }, 2000);
+    }, 1000);
     setTimeout(connectWebSocket, 1000);
   };
 
@@ -561,7 +561,7 @@ function showDiceRoll(data) {
   setTimeout(() => {
     diceOverlay.classList.remove('show');
     diceOverlay.setAttribute('aria-hidden', 'true');
-  }, 2000);
+  }, 1000);
 }
 
 
@@ -1220,7 +1220,7 @@ function startSceneImagePolling() {
     } catch (e) {
       console.warn('[GrimDM] Asset poll error:', e);
     }
-  }, 2000);
+  }, 1000);
 }
 
 // --- Restore game state on reload ---
