@@ -92,3 +92,5 @@ class GameState(BaseModel):
     session_id: str = ""
     turn_count: int = 0
     events_log: list[str] = Field(default_factory=list)
+    story_context: str = ""
+    last_dm_utterance: str = ""

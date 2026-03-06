@@ -27,6 +27,35 @@ logger = logging.getLogger(__name__)
 _game_states: dict[str, GameState] = {}
 _STATE_DIR = Path(__file__).parent.parent.parent / "data" / "game_states"
 _STATE_DIR.mkdir(parents=True, exist_ok=True)
+_MAX_EVENTS_LOG = 50
+XP_PER_LEVEL = 100  # XP needed to gain each level (flat)
+
+
+def _award_xp(state, amount: int) -> dict:
+    """Award XP, auto level-up if threshold crossed. Returns xp info dict."""
+    state.player.xp += amount
+    new_level = state.player.xp // XP_PER_LEVEL + 1
+    leveled_up = new_level > state.player.level
+    if leveled_up:
+        gains = new_level - state.player.level
+        state.player.level = new_level
+        state.player.max_hp += 5 * gains
+        state.player.hp = min(state.player.hp + 5 * gains, state.player.max_hp)
+        state.player.attack += gains
+        state.events_log.append(f"LEVEL UP! Now level {state.player.level}")
+    return {
+        "xp": state.player.xp,
+        "level": state.player.level,
+        "xp_in_level": state.player.xp % XP_PER_LEVEL,
+        "xp_to_next": XP_PER_LEVEL - (state.player.xp % XP_PER_LEVEL),
+        "leveled_up": leveled_up,
+        "new_level": state.player.level if leveled_up else None,
+        "hp_max": state.player.max_hp,
+        "hp": state.player.hp,
+        "attack": state.player.attack,
+    }
+
+
 
 
 def _state_path(session_id: str) -> Path:
@@ -53,8 +82,11 @@ def _get_state(session_id: str) -> GameState:
 
 def _save_state(session_id: str) -> None:
     if session_id in _game_states:
+        state = _game_states[session_id]
+        if len(state.events_log) > _MAX_EVENTS_LOG:
+            state.events_log = state.events_log[-_MAX_EVENTS_LOG:]
         path = _state_path(session_id)
-        path.write_text(_game_states[session_id].model_dump_json(indent=2))
+        path.write_text(state.model_dump_json(indent=2))
 
 
 
@@ -159,6 +191,8 @@ def get_player_status(session_id: str) -> str:
         "name": p.name,
         "level": p.level,
         "xp": p.xp,
+        "xp_in_level": p.xp % XP_PER_LEVEL,
+        "xp_to_next": XP_PER_LEVEL - (p.xp % XP_PER_LEVEL),
         "hp": p.hp,
         "max_hp": p.max_hp,
         "attack": p.attack,
@@ -554,8 +588,9 @@ def attack(target: str, session_id: str) -> str:
         result["victory"] = True
         state.player.combat.active = False
         xp_gain = sum(e.get("xp", 10) for e in state.player.combat.enemies)
-        state.player.xp += xp_gain
+        xp_info = _award_xp(state, xp_gain)
         result["xp_gained"] = xp_gain
+        result.update(xp_info)
         result["suggested_music"] = "victory"
 
     state.events_log.append(f"Attack on {target}: {'Hit' if result.get('hit') else 'Miss'} for {result.get('damage', 0)} damage")
@@ -721,17 +756,18 @@ def update_quest(quest_id: str, action: str, session_id: str,
 
     if action == "complete":
         quest.status = QuestStatus.COMPLETED
-        state.player.xp += quest.reward_xp
+        xp_info = _award_xp(state, quest.reward_xp)
         state.events_log.append(f"Quest completed: {quest.name} (+{quest.reward_xp} XP)")
         _save_state(session_id)
         active_quests = [q.model_dump() for q in state.player.quests if q.status == QuestStatus.ACTIVE]
-        return json.dumps({
+        result = {
             "status": "completed",
             "quest": quest.model_dump(),
             "xp_gained": quest.reward_xp,
-            "total_xp": state.player.xp,
             "quests": active_quests,
-        })
+        }
+        result.update(xp_info)
+        return json.dumps(result)
 
     if action == "fail":
         quest.status = QuestStatus.FAILED

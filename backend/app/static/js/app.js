@@ -37,6 +37,12 @@ let hasConnectedOnce = false;
 let cameraStream = null;
 let gestureBattleMode = false;
 
+// Heartbeat — detect hung connections
+let lastServerMessageTime = 0;
+let heartbeatInterval = null;
+const HEARTBEAT_SEND_MS = 15000;    // Ping every 15s
+const HEARTBEAT_TIMEOUT_MS = 45000; // Dead after 45s silence
+
 // Transcript state
 let currentMsgId = null;
 let currentBubbleEl = null;
@@ -197,6 +203,8 @@ function connectWebSocket() {
     statusDot.classList.add('connected');
     statusText.textContent = 'Connected';
     sendBtn.disabled = false;
+    lastServerMessageTime = Date.now();
+    if (isAudioActive) startHeartbeat();
     if (!hasConnectedOnce) {
       hasConnectedOnce = true;
     }
@@ -204,6 +212,7 @@ function connectWebSocket() {
   };
 
   websocket.onmessage = async (event) => {
+    lastServerMessageTime = Date.now();
     const adk = JSON.parse(event.data);
     // Lazy-init audio playback on first audio content (needs prior user gesture)
     if (!dmVoice && adk.content?.parts?.some(p => p.inlineData?.mimeType?.startsWith('audio/'))) {
@@ -214,6 +223,7 @@ function connectWebSocket() {
 
   websocket.onclose = () => {
     sendBtn.disabled = true;
+    stopHeartbeat();
     if (isPaused) return; // Don't reconnect when paused
     // Only show "Reconnecting" if it takes more than 2s
     reconnectTimer = setTimeout(() => {
@@ -226,6 +236,47 @@ function connectWebSocket() {
   websocket.onerror = () => {
     // Don't flash error — onclose will handle reconnect
   };
+}
+
+// --- Heartbeat ---
+
+function startHeartbeat() {
+  stopHeartbeat();
+  heartbeatInterval = setInterval(() => {
+    // Send ping to keep connection alive
+    if (websocket?.readyState === WebSocket.OPEN) {
+      websocket.send(JSON.stringify({ type: 'ping' }));
+    }
+    // Check for hung connection
+    if (lastServerMessageTime && Date.now() - lastServerMessageTime > HEARTBEAT_TIMEOUT_MS) {
+      console.warn('[GrimDM] Connection appears hung — forcing reconnect');
+      forceReconnect();
+    }
+  }, HEARTBEAT_SEND_MS);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+}
+
+function forceReconnect() {
+  stopHeartbeat();
+  if (websocket) {
+    websocket.onclose = null; // prevent double-reconnect
+    websocket.close();
+    websocket = null;
+  }
+  statusDot.classList.remove('connected');
+  statusText.textContent = 'Reconnecting...';
+  dmIndicator.classList.add('visible');
+  dmIndicatorText.textContent = 'Reconnecting...';
+  setTimeout(() => {
+    connectWebSocket();
+    if (isAudioActive) startHeartbeat();
+  }, 1000);
 }
 
 // --- ADK Event Handler ---
@@ -459,6 +510,7 @@ function handleToolResult(funcResponse) {
     case 'attack':
       if (data.attack_roll) showDiceRoll({ total: data.attack_roll, notation: 'd20', natural_20: data.natural_20, natural_1: data.natural_1 });
       if (data.suggested_music) setMusic(`/static/music/${data.suggested_music}.mp3`);
+      if (data.xp !== undefined) updateCharSheet(data);
       break;
     case 'heal_player':
       if (data.hp !== undefined) {
@@ -490,6 +542,7 @@ function handleToolResult(funcResponse) {
       break;
     case 'update_quest':
       if (data.quests) updateQuests(data.quests);
+      if (data.xp !== undefined) updateCharSheet(data);
       break;
   }
 }
@@ -511,16 +564,33 @@ function showDiceRoll(data) {
   }, 2000);
 }
 
+
+function showLevelUp(level) {
+  // Remove any existing flash
+  document.querySelector('.level-up-flash')?.remove();
+  const el = document.createElement('div');
+  el.className = 'level-up-flash';
+  el.innerHTML = `<div class="luf-title">LEVEL UP</div><div class="luf-level">Level ${level}</div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 500);
+  }, 2500);
+}
+
 function updateCharSheet(data) {
   if (data.name) charName.textContent = data.name;
   if (data.level) charLevel.textContent = data.level;
   if (data.hp !== undefined) updateHP(data.hp, data.max_hp);
   if (data.xp !== undefined) {
-    currentXp = data.xp % 100;
+    currentXp = data.xp_in_level !== undefined ? data.xp_in_level : (data.xp % 100);
     xpText.textContent = data.xp;
-    xpValueEl.textContent = data.xp;
+    xpValueEl.textContent = `${data.xp_in_level !== undefined ? data.xp_in_level : (data.xp % 100)}/100`;
     drawVitalStrips(hpStripCanvas, xpStripCanvas, manaStripCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
   }
+  if (data.leveled_up && data.new_level) showLevelUp(data.new_level);
+  if (data.level) charLevel.textContent = data.level;
   if (data.attack) charAtk.textContent = data.attack;
   if (data.defense) charDef.textContent = data.defense;
   if (data.stats) {
@@ -570,9 +640,7 @@ function updateInventory(items) {
 }
 
 function updateQuests(quests) {
-  while (questList.firstChild) {
-    questList.removeChild(questList.firstChild);
-  }
+  questList.innerHTML = '';
 
   if (!quests || quests.length === 0) {
     const emptyDiv = document.createElement('div');
@@ -585,9 +653,24 @@ function updateQuests(quests) {
   for (const quest of quests) {
     const questDiv = document.createElement('div');
     questDiv.className = 'quest-item';
-    questDiv.textContent = quest.name;
-    if (quest.description) {
-      questDiv.title = quest.description;
+    if (quest.description) questDiv.title = quest.description;
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'quest-name';
+    titleEl.textContent = quest.name;
+    questDiv.appendChild(titleEl);
+
+    if (quest.objectives && quest.objectives.length > 0) {
+      const objList = document.createElement('ul');
+      objList.className = 'quest-objectives';
+      for (const obj of quest.objectives) {
+        const li = document.createElement('li');
+        const done = (quest.completed_objectives || []).includes(obj);
+        li.className = done ? 'quest-obj done' : 'quest-obj';
+        li.textContent = (done ? '✓ ' : '○ ') + obj;
+        objList.appendChild(li);
+      }
+      questDiv.appendChild(objList);
     }
     questList.appendChild(questDiv);
   }
@@ -957,6 +1040,7 @@ micBtn.addEventListener('click', async () => {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
       connectWebSocket();
     }
+    startHeartbeat();
 
     addSystemMessage('Voice active — speak to the Dungeon Master');
   } catch (e) {
