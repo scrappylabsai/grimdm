@@ -1,0 +1,19 @@
+name: Deploy GrimDM
+
+on:
+  push:
+    branches: [main, dev]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 5
+
+    steps:
+      - name: Deploy prod
+        if: github.ref == 'refs/heads/main'
+        run: /home/brian/grimdm/deploy/deploy-prod.sh
+
+      - name: Deploy dev
+        if: github.ref == 'refs/heads/dev'
+        run: /home/brian/grimdm/deploy/deploy-dev.sh
