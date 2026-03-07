@@ -114,3 +114,39 @@ async def _generate_player_voice_bg(
 
     except Exception as e:
         logger.error(f"Player voice clone error: {e}")
+
+
+async def request_player_photo(prompt: str, session_id: str) -> str:
+    """Ask the player to take a photo with their camera.
+
+    This opens the camera overlay on the player's screen automatically.
+    Use this ONCE early in the session (after stats roll, before first scene)
+    to introduce the camera element and capture the player's environment for
+    a personalized styled scene.
+
+    Args:
+        prompt: What to ask the player to photograph
+                (e.g. "Show me a glimpse of your world...")
+        session_id: Current game session ID
+
+    Returns:
+        Confirmation that camera request was sent to player
+    """
+    from app.session_context import resolve_session_id
+    from app.tools.scene import _pending_images
+    import json
+
+    session_id = resolve_session_id(session_id)
+
+    # Push a theater event that triggers the camera overlay on the client
+    from app.tools.game import _theater_events
+    _theater_events.setdefault(session_id, []).append({
+        "type": "open_camera",
+        "data": {"prompt": prompt},
+    })
+
+    return json.dumps({
+        "status": "camera_requested",
+        "prompt": prompt,
+        "message": "Camera overlay opened for player. Wait for their photo before calling generate_styled_scene.",
+    })

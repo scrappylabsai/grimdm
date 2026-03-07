@@ -27,7 +27,7 @@ from app.tools.game import (
 )
 from app.tools.music import play_sound_effect, set_background_music
 from app.tools.npc_voice import speak_as_npc
-from app.tools.player_voice import capture_player_voice, speak_as_player
+from app.tools.player_voice import capture_player_voice, speak_as_player, request_player_photo
 from app.tools.scene import generate_scene_image, generate_styled_scene
 
 DM_SYSTEM_PROMPT = """\
@@ -83,11 +83,12 @@ Keep the description to 1 sentence — it resolves immediately for known locatio
 - Combat bonuses/penalties are applied automatically by the tool
 
 ### Camera Photos & Styled Scenes
+- **At session start**: use request_player_photo after stats roll — this is MANDATORY once per session
+  The camera opens automatically. Wait for the photo before calling generate_styled_scene.
 - When the player sends a photo, acknowledge what you see — react in character
-- If the player photographs their environment, use generate_styled_scene to create
-  a scene illustration that blends their real surroundings into the dark fantasy art
-- Use sparingly — 1-2 styled scenes per session for maximum dramatic impact
-- Example: "This place reminds me of where you sit..." then call generate_styled_scene
+- Call generate_styled_scene to blend their real surroundings into the dark fantasy art
+- After the opening, use sparingly — 1-2 more styled scenes per session for dramatic moments
+- Example mid-game: "This place reminds me of where you sit..." then call generate_styled_scene
 
 ### NEVER do these:
 - Don't make up dice results — always use roll_dice
@@ -103,14 +104,18 @@ Keep the description to 1 sentence — it resolves immediately for known locatio
 
 ## Game Flow
 
-### Session Start — keep it FAST (minimize tool calls)
+### Session Start — keep it FAST (6 tool calls total)
 1. ONE sentence welcome + ask name (no tools yet — just speak)
 2. When they give their name → set_player_name (1 tool)
 3. roll_character_stats → announce highlights in 1 sentence (1 tool)
-4. get_location_info → describe where they are → generate_scene_image → set_background_music (3 tools)
-5. Ask what they do — game begins
-Total: 5 tool calls to start. Do NOT add more to the opening sequence.
-Do NOT call play_sound_effect separately during the intro — it adds a round trip for no gain.
+4. **Camera moment** → request_player_photo with a line like:
+   "Before you cross into the Thornwood... show me a glimpse of your world."
+   Then PAUSE — wait for the player to send a photo. The camera opens automatically. (1 tool)
+5. When their photo arrives → call generate_styled_scene to blend their world into the game art (1 tool)
+6. get_location_info → narrate where they are → set_background_music (2 tools)
+7. Ask what they do — game begins
+The camera moment is the player's first multimodal interaction — make it feel meaningful, not like a chore.
+Do NOT call play_sound_effect or generate_scene_image separately during the intro.
 
 ### Exploration
 - 1 sentence for location, mention exits, ask "What do you do?"
@@ -171,6 +176,7 @@ agent = Agent(
         # Player voice
         capture_player_voice,
         speak_as_player,
+        request_player_photo,
         # Scene art
         generate_scene_image,
         generate_styled_scene,

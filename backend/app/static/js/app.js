@@ -1214,6 +1214,11 @@ function startSceneImagePolling() {
               showGestureResult(event.data);
               playSFX('/static/sfx/sword_clash.mp3');
             }
+            if (event.type === 'open_camera') {
+              const hint = event.data?.prompt || 'Show the DM your world...';
+              // Small delay so the DM voice finishes the line first
+              setTimeout(() => openCamera(hint), 800);
+            }
           }
         }
       }
