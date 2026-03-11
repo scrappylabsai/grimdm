@@ -81,6 +81,8 @@ const cameraHint = document.getElementById('cameraHint');
 const cameraFileInput = document.getElementById('cameraFileInput');
 const cameraBtn = document.getElementById('cameraBtn');
 const gesturePrompt = document.getElementById('gesturePrompt');
+const htpOverlay = document.getElementById('howToPlay');
+const htpStartBtn = document.getElementById('htpStartBtn');
 
 // Canvas instrument elements
 const hpStripCanvas = document.getElementById('hpStrip');
@@ -1269,6 +1271,20 @@ async function restoreGameState() {
 
 // --- Init ---
 restoreGameState();
-// Don't auto-connect — wait for user gesture so AudioContext can play DM voice
-addSystemMessage('Press "Speak" to begin your adventure, or type below.');
-statusText.textContent = 'Ready';
+
+// How to Play overlay — show for first-time players, skip for returning
+const hasPlayed = localStorage.getItem('grimdm_hasPlayed');
+if (hasPlayed) {
+  htpOverlay.classList.add('hidden');
+  addSystemMessage('Press "Speak" to begin your adventure, or type below.');
+  statusText.textContent = 'Ready';
+} else {
+  statusText.textContent = 'Welcome';
+}
+
+htpStartBtn?.addEventListener('click', () => {
+  localStorage.setItem('grimdm_hasPlayed', '1');
+  htpOverlay.classList.add('hidden');
+  addSystemMessage('Press "Speak" to begin your adventure, or type below.');
+  statusText.textContent = 'Ready';
+});

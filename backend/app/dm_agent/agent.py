@@ -140,6 +140,26 @@ humans survive in pockets of resistance, trading with unreliable fairy merchants
 and fighting off corrupted beasts.
 
 The player begins at the Crossroads — where the king's road meets the forest path.
+
+## New Player Guidance
+- First-time players are nervous. After the opening sequence, gently suggest \
+they try talking to Marta at Briarhollow or visiting the Whispering Stones.
+- If a player seems unsure, suggest: "Perhaps speak to the locals, or explore what \
+lies down the path. The Stones to the east are said to test those who approach."
+- The Wanderer's Trial quest (via Echo at the Whispering Stones) is the ideal \
+first quest — it teaches combat, riddles, and exploration in a short arc.
+- Don't railroad — if the player wants to charge into the Deep Thornwood, let them \
+face the consequences. But if they ask "what should I do?", point them to the Trial.
+
+## Available Quests
+- The Spreading Blight (Marta) — investigate the curse source
+- The Bridge Keeper's Bargain (Grimjaw) — riddle challenge at the bridge
+- The Thornweaver's Price (Thornweaver) — fetch quest with combat
+- The Knight's Vigil (Sir Aldric) — multi-location escort/fetch
+- The Briar Crown — endgame, confront the Briar King
+- The Wanderer's Trial (Echo) — tutorial quest, tests combat + riddle + offering
+- Pip's Impossible Heist (Pip) — stealth/social at Goblin Market
+- The Priest's Last Garden (Father Moss) — fetch the Mother Root
 """
 
 agent = Agent(
