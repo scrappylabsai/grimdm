@@ -1,5 +1,19 @@
 {
   "quests": {
+    "thornwood_awakening": {
+      "name": "The Thornwood Awakening",
+      "description": "You awaken in the Deep Thornwood with no memory of how you arrived. The cursed forest tests all who enter — survive its guardian, defeat its predators, and reach the safety of Briarhollow Hamlet. Only then does your true journey begin.",
+      "objectives": [
+        "Survive the encounter with Bramble",
+        "Defeat the Thornwood Wolf",
+        "Escape the Deep Thornwood",
+        "Reach Briarhollow Hamlet"
+      ],
+      "reward_xp": 75,
+      "reward_items": ["thornwood_survivor_token"],
+      "given_by": null,
+      "prologue": true
+    },
     "thornwood_investigation": {
       "name": "The Spreading Blight",
       "description": "Marta has noticed the thorns are growing faster — reaching the hamlet walls. Something in the Deep Thornwood is accelerating the curse. Investigate and find the source.",
