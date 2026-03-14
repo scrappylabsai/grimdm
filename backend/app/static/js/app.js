@@ -17,6 +17,9 @@ import {
   drawVitalRings,
   drawVitalStrips,
   drawStatRadar,
+  updateStatChips,
+  drawEnemyArc,
+  drawCompass,
   startDMHeartbeat,
   setDMHeartbeatMode,
   stopDMHeartbeat,
@@ -89,7 +92,10 @@ const manaStripCanvas = document.getElementById('manaStrip');
 const hpValueEl = document.getElementById('hpValue');
 const xpValueEl = document.getElementById('xpValue');
 const manaValueEl = document.getElementById('manaValue');
-const statRadarCanvas = document.getElementById('statRadar');
+const compassCanvas = document.getElementById('compassCanvas');
+const charExitList = document.getElementById('charExits');
+const combatGroup = document.getElementById('combatGroup');
+const enemyRow = document.getElementById('enemyRow');
 const dmHeartbeatCanvas = document.getElementById('dmHeartbeat');
 const creatureRadarCanvas = document.getElementById('creatureRadar');
 const creatureRadarGroup = document.getElementById('creatureRadarGroup');
@@ -488,9 +494,7 @@ function handleToolResult(funcResponse) {
         charLocation.textContent = data.name || data.location_name;
       }
       if (data.connections && data.connections.length > 0) {
-        const exits = data.connections.map(c => c.replace(/_/g, ' ')).join(', ');
-        charExits.textContent = exits;
-        charExits.parentElement.style.display = '';
+        updateCompassExits(data.connections, data.exit_directions);
       }
       if (data.suggested_music) {
         setMusic(`/static/music/${data.suggested_music}.mp3`);
@@ -506,11 +510,14 @@ function handleToolResult(funcResponse) {
       break;
     case 'start_combat':
       if (data.suggested_music) setMusic(`/static/music/${data.suggested_music}.mp3`);
+      if (data.enemies) updateCombatEnemies(data.enemies);
       break;
     case 'attack':
       if (data.attack_roll) showDiceRoll({ total: data.attack_roll, notation: 'd20', natural_20: data.natural_20, natural_1: data.natural_1 });
       if (data.suggested_music) setMusic(`/static/music/${data.suggested_music}.mp3`);
       if (data.xp !== undefined) updateCharSheet(data);
+      if (data.enemies) updateCombatEnemies(data.enemies);
+      if (data.combat_ended) combatGroup.style.display = 'none';
       break;
     case 'heal_player':
       if (data.hp !== undefined) {
@@ -603,6 +610,65 @@ function updateCharSheet(data) {
   }
   if (data.gold !== undefined) charGold.textContent = data.gold;
   if (data.location) charLocation.textContent = data.location;
+}
+
+// Compass + exit list — maps connection names to compass directions
+function updateCompassExits(connections, exitDirections) {
+  // exitDirections is optional {connection_name: "N"/"S"/"E"/"W"/etc} from backend
+  // If not provided, just show text list without compass directions
+  const dirMap = {
+    north: 'N', south: 'S', east: 'E', west: 'W',
+    northeast: 'NE', northwest: 'NW', southeast: 'SE', southwest: 'SW',
+  };
+  const exits = [];
+  // Build exit list in DOM
+  charExitList.textContent = '';
+  for (const conn of connections) {
+    const name = conn.replace(/_/g, ' ');
+    // Try to get direction from exitDirections map or from name heuristics
+    let dir = null;
+    if (exitDirections && exitDirections[conn]) {
+      dir = exitDirections[conn].toUpperCase();
+    } else {
+      // Check if connection name contains a direction word
+      const lower = conn.toLowerCase();
+      for (const [word, d] of Object.entries(dirMap)) {
+        if (lower.includes(word)) { dir = d; break; }
+      }
+    }
+    if (dir) exits.push({ dir, name });
+    const line = document.createElement('div');
+    line.textContent = dir ? `${dir} — ${name}` : name;
+    charExitList.appendChild(line);
+  }
+  // Draw compass
+  if (compassCanvas) drawCompass(compassCanvas, exits);
+}
+
+// Enemy combat arcs — show/hide + render smooth arcs
+function updateCombatEnemies(enemies) {
+  if (!enemies || enemies.length === 0) {
+    combatGroup.style.display = 'none';
+    return;
+  }
+  combatGroup.style.display = '';
+  enemyRow.textContent = '';
+  for (const enemy of enemies) {
+    const unit = document.createElement('div');
+    unit.className = 'enemy-unit';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'enemy-arc-canvas';
+    canvas.width = 140;
+    canvas.height = 116;
+    const nameEl = document.createElement('span');
+    nameEl.className = 'enemy-name';
+    nameEl.textContent = enemy.name;
+    unit.appendChild(canvas);
+    unit.appendChild(nameEl);
+    enemyRow.appendChild(unit);
+    const pct = enemy.max_hp > 0 ? enemy.hp / enemy.max_hp : 0;
+    drawEnemyArc(canvas, pct);
+  }
 }
 
 function updateHP(hp, maxHp) {
@@ -1232,7 +1298,8 @@ function startSceneImagePolling() {
 async function restoreGameState() {
   // Initialize instruments with defaults
   drawVitalStrips(hpStripCanvas, xpStripCanvas, manaStripCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
-  drawStatRadar(statRadarCanvas, 10, 10, 10, 10, 10);
+  updateStatChips(10, 10, 10, 10, 10);
+  if (compassCanvas) drawCompass(compassCanvas, []);
 
   try {
     const resp = await fetch(`/api/game-state/${sessionId}`);
@@ -1246,13 +1313,14 @@ async function restoreGameState() {
         charCon.textContent = data.stats.constitution;
         charWis.textContent = data.stats.wisdom;
         charCha.textContent = data.stats.charisma;
-        drawStatRadar(statRadarCanvas, data.stats.strength, data.stats.dexterity, data.stats.constitution, data.stats.wisdom, data.stats.charisma);
+        updateStatChips(data.stats.strength, data.stats.dexterity, data.stats.constitution, data.stats.wisdom, data.stats.charisma);
       }
       charAtk.textContent = data.attack;
       charDef.textContent = data.defense;
       charGold.textContent = data.gold;
       charLevel.textContent = data.level;
       if (data.location) charLocation.textContent = data.location;
+      if (data.connections) updateCompassExits(data.connections, data.exit_directions);
       if (data.xp !== undefined) {
         currentXp = data.xp % 100;
         xpText.textContent = data.xp;
