@@ -510,34 +510,117 @@ body {
   white-space: nowrap;
 }
 
-/* Stats row */
-.stat-row {
-  display: flex;
-  gap: 8px;
+/* Stat chips — color-coded number + modifier */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
 }
-
-.stat {
-  flex: 1;
+.stat-chip {
   text-align: center;
-  padding: 6px;
+  padding: 5px 3px;
   background: var(--bg-panel-alt);
   border-radius: var(--radius);
   border: 1px solid var(--border-color);
 }
+.stat-chip .sc-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1px; }
+.stat-chip .sc-value { font-size: 1rem; font-weight: 700; line-height: 1; }
+.stat-chip .sc-mod { font-size: 0.6rem; font-weight: 600; margin-top: 1px; }
+.stat-chip.strong .sc-label { color: var(--accent-green); }
+.stat-chip.strong .sc-value { color: #6dca7c; }
+.stat-chip.strong .sc-mod { color: var(--accent-green); }
+.stat-chip.strong { border-color: rgba(74,154,92,0.3); }
+.stat-chip.good .sc-label { color: #7ab88a; }
+.stat-chip.good .sc-value { color: #a8ccb0; }
+.stat-chip.good .sc-mod { color: #7ab88a; }
+.stat-chip.neutral .sc-label { color: var(--text-dim); }
+.stat-chip.neutral .sc-value { color: var(--text-secondary); }
+.stat-chip.neutral .sc-mod { color: var(--text-dim); }
+.stat-chip.weak .sc-label { color: #b08040; }
+.stat-chip.weak .sc-value { color: #c9a060; }
+.stat-chip.weak .sc-mod { color: #b08040; }
+.stat-chip.poor .sc-label { color: var(--accent-red); }
+.stat-chip.poor .sc-value { color: #d06060; }
+.stat-chip.poor .sc-mod { color: var(--accent-red); }
+.stat-chip.poor { border-color: rgba(180,64,64,0.3); }
 
-.stat-label {
+/* Derived stats row (ATK/DEF/Gold) */
+.derived-row {
+  display: flex;
+  gap: 6px;
+}
+.derived-stat {
+  flex: 1;
+  text-align: center;
+  padding: 5px;
+  background: var(--bg-panel-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+.derived-label {
   display: block;
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
-.stat-value {
+.derived-value {
   display: block;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+.derived-gold { color: var(--accent-gold); }
+
+/* Compass + exits */
+.compass-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.compass-canvas {
+  display: block;
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+}
+.exit-list {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+/* Combat enemy arcs */
+.combat-group label {
+  font-size: 0.65rem;
+  color: var(--accent-red);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.enemy-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.enemy-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.enemy-name {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.enemy-arc-canvas {
+  display: block;
+  width: 70px;
+  height: 58px;
 }
 
 /* Vital LED strip bars */
@@ -577,12 +660,7 @@ body {
   flex-shrink: 0;
 }
 
-.stat-radar-canvas {
-  display: block;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto;
-}
+/* stat-radar-canvas removed — replaced by stat chips */
 
 .dm-heartbeat-canvas {
   display: block;
@@ -616,12 +694,7 @@ body {
   font-style: italic;
 }
 
-.exits-list {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-style: italic;
-  text-transform: capitalize;
-}
+/* exits-list removed — replaced by exit-list in compass section */
 
 /* Inventory & quest lists */
 .inventory-list, .quest-list {

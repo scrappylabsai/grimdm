@@ -165,126 +165,185 @@ function renderLedStrip(canvas, pct, type, pulsePhase) {
 
 
 // ============================================================
-// 2. STAT RADAR — Pentagon for STR/DEX/CON/WIS/CHA
+// 2. STAT CHIPS — color-coded number + modifier (replaces radar)
 // ============================================================
 
-const radarState = {
-  targets: [10, 10, 10, 10, 10],
-  current: [10, 10, 10, 10, 10],
-  animId: null,
-};
-
-export function drawStatRadar(canvas, str, dex, con, wis, cha) {
-  radarState.targets = [str, dex, con, wis, cha];
-  if (!radarState.animId) {
-    radarState.animId = requestAnimationFrame(() => animateRadar(canvas));
-  }
+// Legacy compat — called from app.js, now updates stat chips instead
+export function drawStatRadar(_canvas, str, dex, con, wis, cha) {
+  updateStatChips(str, dex, con, wis, cha);
 }
 
-function animateRadar(canvas) {
-  const s = radarState;
-  const ease = 0.1;
-  let settled = true;
-
-  for (let i = 0; i < 5; i++) {
-    s.current[i] += (s.targets[i] - s.current[i]) * ease;
-    if (Math.abs(s.current[i] - s.targets[i]) > 0.1) settled = false;
-  }
-
-  renderRadar(canvas, s.current);
-
-  if (!settled) {
-    s.animId = requestAnimationFrame(() => animateRadar(canvas));
-  } else {
-    s.animId = null;
-  }
+function statModifier(val) {
+  const mod = Math.floor((val - 10) / 2);
+  return mod >= 0 ? '+' + mod : '' + mod;
 }
 
-function renderRadar(canvas, vals) {
+function statColorClass(val) {
+  if (val >= 16) return 'strong';
+  if (val >= 13) return 'good';
+  if (val >= 10) return 'neutral';
+  if (val >= 8) return 'weak';
+  return 'poor';
+}
+
+export function updateStatChips(str, dex, con, wis, cha) {
+  const container = document.getElementById('statsGrid');
+  if (!container) return;
+  const labels = ['STR', 'DEX', 'CON', 'WIS', 'CHA'];
+  const vals = [str, dex, con, wis, cha];
+  container.textContent = '';
+  const tints = {
+    strong: 'rgba(74,154,92,0.08)', good: 'rgba(74,154,92,0.04)',
+    neutral: 'transparent', weak: 'rgba(201,168,76,0.06)', poor: 'rgba(180,64,64,0.08)'
+  };
+  vals.forEach((v, i) => {
+    const cls = statColorClass(v);
+    const chip = document.createElement('div');
+    chip.className = 'stat-chip ' + cls;
+    chip.style.background = tints[cls];
+    const lbl = document.createElement('div');
+    lbl.className = 'sc-label';
+    lbl.textContent = labels[i];
+    const val = document.createElement('div');
+    val.className = 'sc-value';
+    val.textContent = Math.round(v);
+    const mod = document.createElement('div');
+    mod.className = 'sc-mod';
+    mod.textContent = statModifier(v);
+    chip.appendChild(lbl);
+    chip.appendChild(val);
+    chip.appendChild(mod);
+    container.appendChild(chip);
+  });
+}
+
+// ============================================================
+// 2b. ENEMY HP — Smooth arc gauge (green 100% → red 0%)
+// ============================================================
+
+function enemyHpColor(pct) {
+  if (pct > 0.6) return lerpColor('#c9a84c', '#4a9a5c', (pct - 0.6) / 0.4);
+  return lerpColor('#c94040', '#c9a84c', pct / 0.6);
+}
+
+export function drawEnemyArc(canvas, pct) {
   const { ctx, w, h } = dpr(canvas);
   ctx.clearRect(0, 0, w, h);
-
-  const cx = w / 2, cy = h / 2;
-  const r = Math.min(w, h) * 0.36;
-  const labels = ['STR', 'DEX', 'CON', 'WIS', 'CHA'];
-  const n = labels.length;
-  // Max stat value for scale (D&D style, 20 is typical max)
-  const maxStat = 20;
-
-  // Grid rings at 25/50/75/100%
-  for (let ring = 0.25; ring <= 1; ring += 0.25) {
-    ctx.beginPath();
-    for (let i = 0; i <= n; i++) {
-      const a = -Math.PI / 2 + i * (Math.PI * 2 / n);
-      const x = cx + Math.cos(a) * r * ring;
-      const y = cy + Math.sin(a) * r * ring;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  // Axis lines
-  for (let i = 0; i < n; i++) {
-    const a = -Math.PI / 2 + i * (Math.PI * 2 / n);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Labels
-    const lr = r + 14;
-    ctx.font = '9px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = TEXT_DIM;
-    ctx.fillText(labels[i], cx + Math.cos(a) * lr, cy + Math.sin(a) * lr);
-  }
-
-  // Data fill
+  const cx = w / 2, cy = h * 0.55, r = Math.min(w, h) * 0.36;
+  const start = Math.PI * 0.75, end = Math.PI * 2.25, total = end - start;
+  const lw = r * 0.16;
+  pct = Math.max(0, Math.min(1, pct));
+  const c = enemyHpColor(pct);
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const a = -Math.PI / 2 + i * (Math.PI * 2 / n);
-    const v = Math.min(1, vals[i] / maxStat);
-    const x = cx + Math.cos(a) * r * v;
-    const y = cy + Math.sin(a) * r * v;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.closePath();
-  ctx.fillStyle = RADAR_FILL;
-  ctx.fill();
-  ctx.strokeStyle = RADAR_STROKE;
-  ctx.lineWidth = 1.5;
+  ctx.arc(cx, cy, r, start, end);
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = 'rgba(255,255,255,.06)';
   ctx.stroke();
-
-  // Dots at vertices
-  for (let i = 0; i < n; i++) {
-    const a = -Math.PI / 2 + i * (Math.PI * 2 / n);
-    const v = Math.min(1, vals[i] / maxStat);
-    const x = cx + Math.cos(a) * r * v;
-    const y = cy + Math.sin(a) * r * v;
+  if (pct > 0) {
     ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = RADAR_STROKE;
-    ctx.fill();
+    ctx.arc(cx, cy, r, start, start + pct * total);
+    ctx.lineWidth = lw;
+    ctx.strokeStyle = c;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, start + pct * total);
+    ctx.lineWidth = lw + 4;
+    ctx.strokeStyle = rgba(c, 0.12);
+    ctx.stroke();
   }
+  ctx.font = 'bold 13px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = c;
+  ctx.fillText(Math.round(pct * 100) + '%', cx, cy + 4);
+}
 
-  // Stat values near dots
-  ctx.font = 'bold 10px system-ui, sans-serif';
-  ctx.fillStyle = TEXT_PRIMARY;
-  for (let i = 0; i < n; i++) {
-    const a = -Math.PI / 2 + i * (Math.PI * 2 / n);
-    const v = Math.min(1, vals[i] / maxStat);
-    const dist = r * v + 10;
-    const x = cx + Math.cos(a) * dist;
-    const y = cy + Math.sin(a) * dist;
+// ============================================================
+// 2c. COMPASS — mini compass with gold-tick exits
+// ============================================================
+
+export function drawCompass(canvas, exits) {
+  const { ctx, w, h } = dpr(canvas);
+  ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, r = Math.min(w, h) * 0.4;
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  const cardinals = [
+    { l: 'N', a: -Math.PI / 2 }, { l: 'E', a: 0 },
+    { l: 'S', a: Math.PI / 2 }, { l: 'W', a: Math.PI }
+  ];
+  const interC = [
+    { l: 'NE', a: -Math.PI / 4 }, { l: 'SE', a: Math.PI / 4 },
+    { l: 'SW', a: Math.PI * 3 / 4 }, { l: 'NW', a: -Math.PI * 3 / 4 }
+  ];
+  const allDirs = [...cardinals, ...interC];
+  // Minor ticks
+  for (let d = 0; d < 360; d += 15) {
+    if (d % 45 === 0) continue;
+    const a = (d - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4));
+    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  // Direction ticks — exits glow gold
+  allDirs.forEach(d => {
+    const isExit = exits.some(e => e.dir === d.l);
+    const isCardinal = cardinals.some(c => c.l === d.l);
+    const tickLen = isCardinal ? 8 : 6;
+    if (isExit) {
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(d.a) * (r - tickLen), cy + Math.sin(d.a) * (r - tickLen));
+      ctx.lineTo(cx + Math.cos(d.a) * r, cy + Math.sin(d.a) * r);
+      ctx.strokeStyle = rgba(XP_COLOR, 0.25);
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(d.a) * (r - tickLen), cy + Math.sin(d.a) * (r - tickLen));
+      ctx.lineTo(cx + Math.cos(d.a) * r, cy + Math.sin(d.a) * r);
+      ctx.strokeStyle = XP_COLOR;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(d.a) * (r - tickLen), cy + Math.sin(d.a) * (r - tickLen));
+      ctx.lineTo(cx + Math.cos(d.a) * r, cy + Math.sin(d.a) * r);
+      ctx.strokeStyle = isCardinal ? TEXT_DIM : 'rgba(255,255,255,.06)';
+      ctx.lineWidth = isCardinal ? 2 : 1;
+      ctx.stroke();
+    }
+  });
+  // Cardinal labels
+  cardinals.forEach(c => {
+    const isExit = exits.some(e => e.dir === c.l);
+    ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(Math.round(vals[i]), x, y);
-  }
+    ctx.fillStyle = c.l === 'N' ? HP_COLOR : (isExit ? XP_COLOR : TEXT_DIM);
+    ctx.fillText(c.l, cx + Math.cos(c.a) * (r - 18), cy + Math.sin(c.a) * (r - 18));
+  });
+  // Inter-cardinal labels for exits
+  interC.forEach(c => {
+    const isExit = exits.some(e => e.dir === c.l);
+    if (isExit) {
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = XP_COLOR;
+      ctx.fillText(c.l, cx + Math.cos(c.a) * (r - 14), cy + Math.sin(c.a) * (r - 14));
+    }
+  });
+  // Center dot (player)
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = HB_LISTENING;
+  ctx.fill();
 }
 
 

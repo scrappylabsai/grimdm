@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GrimDM — Voice AI Dungeon Master</title>
-    <link rel="stylesheet" href="/static/css/game.css?v=24">
-    <script src="/static/js/app.js?v=24" type="module"></script>
+    <link rel="stylesheet" href="/static/css/game.css?v=26">
+    <script src="/static/js/app.js?v=26" type="module"></script>
   </head>
 
   <body>
@@ -106,8 +106,8 @@
             </div>
           </div>
 
-          <div class="stat-group radar-group">
-            <canvas id="statRadar" class="stat-radar-canvas" role="img" aria-label="Character stats radar"></canvas>
+          <div class="stat-group">
+            <div class="stats-grid" id="statsGrid"></div>
           </div>
 
           <!-- Hidden stat values for accessibility / JS state -->
@@ -123,19 +123,23 @@
             <span id="charCha">10</span>
           </div>
 
-          <div class="stat-row">
-            <div class="stat"><span class="stat-label">ATK</span><span class="stat-value" id="charAtk">5</span></div>
-            <div class="stat"><span class="stat-label">DEF</span><span class="stat-value" id="charDef">3</span></div>
-            <div class="stat"><span class="stat-label">Gold</span><span class="stat-value" id="charGold">10</span></div>
+          <div class="derived-row">
+            <div class="derived-stat"><span class="derived-label">ATK</span><span class="derived-value" id="charAtk">5</span></div>
+            <div class="derived-stat"><span class="derived-label">DEF</span><span class="derived-value" id="charDef">3</span></div>
+            <div class="derived-stat"><span class="derived-label">Gold</span><span class="derived-value derived-gold" id="charGold">10</span></div>
           </div>
 
-          <div class="stat-group">
-            <label>Location</label>
+          <div class="stat-group compass-group">
+            <div class="compass-row">
+              <canvas id="compassCanvas" class="compass-canvas" width="100" height="100" role="img" aria-label="Navigation compass"></canvas>
+              <div class="exit-list" id="charExits"></div>
+            </div>
             <div class="location-name" id="charLocation">The Crossroads</div>
           </div>
-          <div class="stat-group" style="display:none">
-            <label>Exits</label>
-            <div class="exits-list" id="charExits"></div>
+
+          <div class="stat-group combat-group" style="display:none" id="combatGroup">
+            <label>Combat</label>
+            <div class="enemy-row" id="enemyRow"></div>
           </div>
 
           <div class="stat-group creature-radar-group" style="display:none" id="creatureRadarGroup">

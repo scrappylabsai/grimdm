@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrimDM — UI Redesign v2</title>
+<style>
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-panel: #111118;
+  --bg-panel-alt: #16161f;
+  --text-primary: #e8e4df;
+  --text-secondary: #a8a4a0;
+  --text-dim: #7a7672;
+  --accent-gold: #c9a84c;
+  --accent-red: #b44040;
+  --accent-green: #4a9a5c;
+  --accent-blue: #4a7ab4;
+  --accent-purple: #7a5aaa;
+  --border-color: #2a2a36;
+  --font-body: 'Segoe UI', system-ui, sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --radius: 6px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  padding: 20px;
+  overflow-y: auto;
+}
+h1 {
+  font-family: var(--font-display);
+  color: var(--accent-gold);
+  text-shadow: 0 0 20px rgba(201,168,76,0.3);
+  font-size: 1.6rem;
+  margin-bottom: 6px;
+}
+.subtitle { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 24px; }
+.section { margin-bottom: 36px; }
+.section-title {
+  font-size: 0.85rem; font-weight: 700; color: var(--accent-gold);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 12px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+.variants { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.variant {
+  background: var(--bg-panel); border: 1px solid var(--border-color);
+  border-radius: 8px; padding: 16px;
+}
+.variant-label { font-size: 0.75rem; font-weight: 700; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.variant-desc { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 12px; }
+canvas { display: block; }
+.vital-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.vital-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; width: 22px; text-align: right; flex-shrink: 0; }
+.vital-label.hp { color: var(--accent-red); }
+.vital-label.xp { color: var(--accent-gold); }
+.vital-label.mp { color: var(--accent-blue); }
+.vital-canvas { flex: 1; height: 16px; }
+.vital-value { font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); font-family: monospace; width: 42px; flex-shrink: 0; }
+.stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.stat-chip {
+  text-align: center; padding: 6px 4px;
+  background: var(--bg-panel-alt); border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+.stat-chip .s-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.stat-chip .s-value { font-size: 1.1rem; font-weight: 700; line-height: 1; }
+.stat-chip .s-mod { font-size: 0.65rem; font-weight: 600; margin-top: 1px; }
+.stat-chip.strong .s-label { color: var(--accent-green); }
+.stat-chip.strong .s-value { color: #6dca7c; }
+.stat-chip.strong .s-mod { color: var(--accent-green); }
+.stat-chip.strong { border-color: rgba(74,154,92,0.3); }
+.stat-chip.good .s-label { color: #7ab88a; }
+.stat-chip.good .s-value { color: #a8ccb0; }
+.stat-chip.good .s-mod { color: #7ab88a; }
+.stat-chip.neutral .s-label { color: var(--text-dim); }
+.stat-chip.neutral .s-value { color: var(--text-secondary); }
+.stat-chip.neutral .s-mod { color: var(--text-dim); }
+.stat-chip.weak .s-label { color: #b08040; }
+.stat-chip.weak .s-value { color: #c9a060; }
+.stat-chip.weak .s-mod { color: #b08040; }
+.stat-chip.poor .s-label { color: var(--accent-red); }
+.stat-chip.poor .s-value { color: #d06060; }
+.stat-chip.poor .s-mod { color: var(--accent-red); }
+.stat-chip.poor { border-color: rgba(180,64,64,0.3); }
+.derived-row { display: flex; gap: 8px; margin-top: 8px; }
+.derived-stat {
+  flex: 1; text-align: center; padding: 5px;
+  background: var(--bg-panel-alt); border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+.derived-stat .d-label { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.derived-stat .d-value { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+.combat-header { font-size: 0.65rem; color: var(--accent-red); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.enemy-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.enemy-unit { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.enemy-name { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.compass-section { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+.exit-list { font-size: 0.7rem; color: var(--text-secondary); font-style: italic; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>GrimDM — UI Redesign v2</h1>
+<p class="subtitle">Simplified: LED bars for vitals only. Stats as colored number+modifier. Arc gauges for enemy HP (green to red). Compass for navigation.</p>
+
+<!-- SECTION 1: Stats -->
+<div class="section">
+  <div class="section-title">1. Character Stats — Number + Modifier (Color-Coded)</div>
+  <div class="variants">
+    <div class="variant">
+      <div class="variant-label">A: Grid Layout (5-across)</div>
+      <div class="variant-desc">Color shifts from green (strong) to neutral to red (weak). Modifier shows bonus/penalty.</div>
+      <div class="stats-grid" id="stats-grid-a"></div>
+    </div>
+    <div class="variant">
+      <div class="variant-label">B: Compact Inline</div>
+      <div class="variant-desc">Same data, single row. Tighter for narrow panels.</div>
+      <div style="display:flex; gap:4px; justify-content:center;" id="stats-inline-b"></div>
+    </div>
+    <div class="variant">
+      <div class="variant-label">C: With Subtle Background Tint</div>
+      <div class="variant-desc">Background color hints at stat quality. More visual pop without bars.</div>
+      <div class="stats-grid" id="stats-grid-c"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: Enemy HP arcs -->
+<div class="section">
+  <div class="section-title">2. Combat — Enemy HP Arc Gauges (Green 100% to Red 0%)</div>
+  <div class="variants">
+    <div class="variant">
+      <div class="variant-label">A: 120-Segment Arcs</div>
+      <div class="variant-desc">Segmented arcs, green at full, draining to red. Industrial feel.</div>
+      <div class="enemy-row">
+        <div class="enemy-unit"><canvas id="arc-troll" width="110" height="90"></canvas><span class="enemy-name">Troll</span></div>
+        <div class="enemy-unit"><canvas id="arc-goblin" width="110" height="90"></canvas><span class="enemy-name">Goblin</span></div>
+        <div class="enemy-unit"><canvas id="arc-wraith" width="110" height="90"></canvas><span class="enemy-name">Wraith</span></div>
+      </div>
+    </div>
+    <div class="variant">
+      <div class="variant-label">B: Smooth Arcs</div>
+      <div class="variant-desc">Cleaner, single stroke. Same green to red color logic.</div>
+      <div class="enemy-row">
+        <div class="enemy-unit"><canvas id="smooth-troll" width="110" height="90"></canvas><span class="enemy-name">Troll</span></div>
+        <div class="enemy-unit"><canvas id="smooth-goblin" width="110" height="90"></canvas><span class="enemy-name">Goblin</span></div>
+        <div class="enemy-unit"><canvas id="smooth-wraith" width="110" height="90"></canvas><span class="enemy-name">Wraith</span></div>
+      </div>
+    </div>
+    <div class="variant">
+      <div class="variant-label">C: Full Circle Rings (compact)</div>
+      <div class="variant-desc">360 ring, HP% in center. Stacks well horizontally.</div>
+      <div class="enemy-row">
+        <div class="enemy-unit"><canvas id="ring-troll" width="80" height="80"></canvas><span class="enemy-name">Troll</span></div>
+        <div class="enemy-unit"><canvas id="ring-goblin" width="80" height="80"></canvas><span class="enemy-name">Goblin</span></div>
+        <div class="enemy-unit"><canvas id="ring-wraith" width="80" height="80"></canvas><span class="enemy-name">Wraith</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: Compass -->
+<div class="section">
+  <div class="section-title">3. Navigation — Compass + Exits</div>
+  <div class="variants">
+    <div class="variant">
+      <div class="variant-label">A: Compass with Exit Dots</div>
+      <div class="variant-desc">Glowing gold dots on available exits. Location names near dots.</div>
+      <canvas id="compass-full" width="180" height="180" style="margin:0 auto;"></canvas>
+      <div style="text-align:center;font-size:0.7rem;color:var(--text-dim);margin-top:6px;font-style:italic;">The Crossroads</div>
+    </div>
+    <div class="variant">
+      <div class="variant-label">B: Mini Compass + Text List</div>
+      <div class="variant-desc">Compact compass with text exits alongside. Best of both worlds.</div>
+      <div class="compass-section">
+        <canvas id="compass-mini" width="100" height="100"></canvas>
+        <div class="exit-list">
+          <div>N — Village of Eldara</div>
+          <div>E — Thornwood Forest</div>
+          <div>S — Stone Bridge</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4: Full panels -->
+<div class="section">
+  <div class="section-title">4. Full Character Panel — Recommended Layouts</div>
+  <div class="variants">
+
+    <div class="variant" style="max-width:290px;">
+      <div class="variant-label">Panel A: Mini Compass + Text</div>
+      <div class="variant-desc">Compact compass with exit list. Tinted stat chips. Arc enemy HP.</div>
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--font-display);font-size:1.15rem;color:var(--accent-gold);">Aldric</div>
+        <div style="font-size:0.75rem;color:var(--text-dim);">Level 3 Warrior</div>
+      </div>
+      <div class="vital-row"><span class="vital-label hp">HP</span><canvas class="vital-canvas" id="fp-hp" width="200" height="16"></canvas><span class="vital-value">15/20</span></div>
+      <div class="vital-row"><span class="vital-label xp">XP</span><canvas class="vital-canvas" id="fp-xp" width="200" height="16"></canvas><span class="vital-value">65</span></div>
+      <div class="vital-row"><span class="vital-label mp">MP</span><canvas class="vital-canvas" id="fp-mp" width="200" height="16"></canvas><span class="vital-value">12/20</span></div>
+      <div style="height:10px;"></div>
+      <div class="stats-grid" id="fp-stats"></div>
+      <div class="derived-row">
+        <div class="derived-stat"><span class="d-label">ATK</span><span class="d-value">7</span></div>
+        <div class="derived-stat"><span class="d-label">DEF</span><span class="d-value">5</span></div>
+        <div class="derived-stat"><span class="d-label">Gold</span><span class="d-value" style="color:var(--accent-gold);">42</span></div>
+      </div>
+      <div style="height:10px;"></div>
+      <div class="compass-section">
+        <canvas id="fp-compass" width="100" height="100"></canvas>
+        <div class="exit-list">
+          <div>N — Village of Eldara</div>
+          <div>E — Thornwood Forest</div>
+          <div>S — Stone Bridge</div>
+        </div>
+      </div>
+      <div style="text-align:left;font-size:0.7rem;color:var(--accent-purple);font-family:var(--font-display);font-style:italic;margin-top:6px;margin-left:4px;">The Crossroads</div>
+      <div style="margin-top:12px;border-top:1px solid var(--border-color);padding-top:10px;">
+        <div class="combat-header">Combat</div>
+        <div class="enemy-row">
+          <div class="enemy-unit"><canvas id="fp-e1" width="80" height="68"></canvas><span class="enemy-name">Troll</span></div>
+          <div class="enemy-unit"><canvas id="fp-e2" width="80" height="68"></canvas><span class="enemy-name">Goblin</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="variant" style="max-width:290px;">
+      <div class="variant-label">Panel B: Tinted Stats + Smooth Arcs</div>
+      <div class="variant-desc">Background-tinted stat chips. Smooth arc enemy HP. Mini compass+text.</div>
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--font-display);font-size:1.15rem;color:var(--accent-gold);">Mira</div>
+        <div style="font-size:0.75rem;color:var(--text-dim);">Level 5 Mage</div>
+      </div>
+      <div class="vital-row"><span class="vital-label hp">HP</span><canvas class="vital-canvas" id="fp2-hp" width="200" height="16"></canvas><span class="vital-value">18/22</span></div>
+      <div class="vital-row"><span class="vital-label xp">XP</span><canvas class="vital-canvas" id="fp2-xp" width="200" height="16"></canvas><span class="vital-value">45</span></div>
+      <div class="vital-row"><span class="vital-label mp">MP</span><canvas class="vital-canvas" id="fp2-mp" width="200" height="16"></canvas><span class="vital-value">8/25</span></div>
+      <div style="height:10px;"></div>
+      <div class="stats-grid" id="fp2-stats"></div>
+      <div class="derived-row">
+        <div class="derived-stat"><span class="d-label">ATK</span><span class="d-value">3</span></div>
+        <div class="derived-stat"><span class="d-label">DEF</span><span class="d-value">4</span></div>
+        <div class="derived-stat"><span class="d-label">Gold</span><span class="d-value" style="color:var(--accent-gold);">87</span></div>
+      </div>
+      <div style="height:10px;"></div>
+      <div class="compass-section">
+        <canvas id="fp2-compass" width="100" height="100"></canvas>
+        <div class="exit-list">
+          <div>N — Dark Cave</div>
+          <div>SE — River Crossing</div>
+          <div>W — Campsite</div>
+        </div>
+      </div>
+      <div style="text-align:left;font-size:0.7rem;color:var(--accent-purple);font-family:var(--font-display);font-style:italic;margin-top:6px;margin-left:4px;">Thornwood Forest</div>
+      <div style="margin-top:12px;border-top:1px solid var(--border-color);padding-top:10px;">
+        <div class="combat-header">Combat</div>
+        <div class="enemy-row">
+          <div class="enemy-unit"><canvas id="fp2-e1" width="80" height="68"></canvas><span class="enemy-name">Wraith</span></div>
+          <div class="enemy-unit"><canvas id="fp2-e2" width="80" height="68"></canvas><span class="enemy-name">Spider</span></div>
+          <div class="enemy-unit"><canvas id="fp2-e3" width="80" height="68"></canvas><span class="enemy-name">Shade</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* GrimDM UI Prototype v2 — all safe DOM construction */
+
+const GOLD='#c9a84c', RED='#c94040', GREEN='#4a9a5c', BLUE='#4a7ab4',
+      PURPLE='#7a5aaa', TEXT_P='#e8e4df', TEXT_D='#7a7672', BG_TRACK='rgba(255,255,255,0.04)';
+
+function dpr(canvas) {
+  const d = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * d; canvas.height = h * d;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(d, d);
+  return { ctx, w, h };
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpColor(a, b, t) {
+  const ar=parseInt(a.slice(1,3),16), ag=parseInt(a.slice(3,5),16), ab=parseInt(a.slice(5,7),16);
+  const br=parseInt(b.slice(1,3),16), bg_=parseInt(b.slice(3,5),16), bb=parseInt(b.slice(5,7),16);
+  return 'rgb('+Math.round(lerp(ar,br,t))+','+Math.round(lerp(ag,bg_,t))+','+Math.round(lerp(ab,bb,t))+')';
+}
+function rgba(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+function hpColor(pct) {
+  if (pct > 0.6) return lerpColor('#c9a84c','#4a9a5c', (pct-0.6)/0.4);
+  return lerpColor('#c94040','#c9a84c', pct/0.6);
+}
+function enemyHpColor(pct) {
+  if (pct > 0.6) return lerpColor('#c9a84c','#4a9a5c', (pct-0.6)/0.4);
+  return lerpColor('#c94040','#c9a84c', pct/0.6);
+}
+
+// === STAT CHIPS (safe DOM) ===
+function statMod(val) { const m = Math.floor((val-10)/2); return m >= 0 ? '+'+m : ''+m; }
+function statClass(val) {
+  if (val >= 16) return 'strong';
+  if (val >= 13) return 'good';
+  if (val >= 10) return 'neutral';
+  if (val >= 8) return 'weak';
+  return 'poor';
+}
+function buildStatChips(container, stats, tinted) {
+  const labels = ['STR','DEX','CON','WIS','CHA'];
+  const vals = [stats.str, stats.dex, stats.con, stats.wis, stats.cha];
+  container.textContent = '';
+  vals.forEach((v, i) => {
+    const cls = statClass(v);
+    const chip = document.createElement('div');
+    chip.className = 'stat-chip ' + cls;
+    if (tinted) {
+      const tints = {strong:'rgba(74,154,92,0.08)',good:'rgba(74,154,92,0.04)',neutral:'transparent',weak:'rgba(201,168,76,0.06)',poor:'rgba(180,64,64,0.08)'};
+      chip.style.background = tints[cls];
+    }
+    const lbl = document.createElement('div'); lbl.className = 's-label'; lbl.textContent = labels[i];
+    const val = document.createElement('div'); val.className = 's-value'; val.textContent = v;
+    const mod = document.createElement('div'); mod.className = 's-mod'; mod.textContent = statMod(v);
+    chip.appendChild(lbl); chip.appendChild(val); chip.appendChild(mod);
+    container.appendChild(chip);
+  });
+}
+
+// === LED STRIP ===
+function drawLedStrip(canvas, pct, color, segs) {
+  segs = segs || 24;
+  const {ctx,w,h} = dpr(canvas);
+  ctx.clearRect(0,0,w,h);
+  const gap=2, pad=1, segW=(w-pad*2-(segs-1)*gap)/segs, segH=h-4, yOff=2;
+  pct = Math.max(0, Math.min(1, pct));
+  const lit = Math.round(pct * segs);
+  for (let i=0; i<segs; i++) {
+    const x = pad + i*(segW+gap);
+    if (i < lit) {
+      const c = typeof color === 'function' ? color(i/(segs-1)) : color;
+      ctx.shadowBlur = 3; ctx.shadowColor = c; ctx.fillStyle = c;
+      ctx.fillRect(x, yOff, segW, segH);
+    } else {
+      ctx.shadowBlur = 0; ctx.fillStyle = BG_TRACK;
+      ctx.fillRect(x, yOff, segW, segH);
+    }
+  }
+  ctx.shadowBlur = 0;
+}
+
+// === ENEMY ARC (120-seg, green->red reversed) ===
+function drawEnemyArc120(canvas, pct) {
+  const {ctx,w,h} = dpr(canvas);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h*0.55, r=Math.min(w,h)*0.38;
+  const segs=60, start=Math.PI*0.75, end=Math.PI*2.25, total=end-start;
+  const segArc=total/segs, lw=Math.max(2.5, r*0.13);
+  pct = Math.max(0, Math.min(1, pct));
+  ctx.lineCap='butt';
+  for(let i=0;i<segs;i++){
+    const a0=start+i*segArc+0.008, a1=start+(i+1)*segArc-0.008;
+    ctx.beginPath(); ctx.arc(cx,cy,r,a0,a1);
+    ctx.lineWidth=lw; ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.stroke();
+  }
+  const lit=Math.round(pct*segs);
+  const c = enemyHpColor(pct);
+  for(let i=0;i<lit;i++){
+    const a0=start+i*segArc+0.008, a1=start+(i+1)*segArc-0.008;
+    ctx.beginPath(); ctx.arc(cx,cy,r,a0,a1);
+    ctx.lineWidth=lw; ctx.strokeStyle=c; ctx.stroke();
+  }
+  ctx.font='bold 13px monospace'; ctx.textAlign='center'; ctx.fillStyle=c;
+  ctx.fillText(Math.round(pct*100)+'%', cx, cy+4);
+}
+
+// === ENEMY SMOOTH ARC ===
+function drawEnemySmoothArc(canvas, pct) {
+  const {ctx,w,h} = dpr(canvas);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h*0.55, r=Math.min(w,h)*0.36;
+  const start=Math.PI*0.75, end=Math.PI*2.25, total=end-start;
+  const lw=r*0.16;
+  pct = Math.max(0, Math.min(1, pct));
+  const c = enemyHpColor(pct);
+  ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(cx,cy,r,start,end);
+  ctx.lineWidth=lw; ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.stroke();
+  if(pct>0){
+    ctx.beginPath(); ctx.arc(cx,cy,r,start,start+pct*total);
+    ctx.lineWidth=lw; ctx.strokeStyle=c; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,r,start,start+pct*total);
+    ctx.lineWidth=lw+4; ctx.strokeStyle=rgba(c,.12); ctx.stroke();
+  }
+  ctx.font='bold 13px monospace'; ctx.textAlign='center'; ctx.fillStyle=c;
+  ctx.fillText(Math.round(pct*100)+'%', cx, cy+4);
+}
+
+// === ENEMY RING ===
+function drawEnemyRing(canvas, pct) {
+  const {ctx,w,h} = dpr(canvas);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, r=Math.min(w,h)*0.36, lw=r*0.2;
+  pct = Math.max(0, Math.min(1, pct));
+  const c = enemyHpColor(pct);
+  ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,Math.PI*1.5);
+  ctx.lineWidth=lw; ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.stroke();
+  if(pct>0){
+    ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+pct*Math.PI*2);
+    ctx.lineWidth=lw; ctx.strokeStyle=c; ctx.stroke();
+  }
+  ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=c; ctx.fillText(Math.round(pct*100)+'%', cx, cy);
+}
+
+// === COMPASS — exit ticks glow gold, non-exits dim ===
+function drawCompass(canvas, exits, size) {
+  const {ctx,w,h} = dpr(canvas);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, r=Math.min(w,h)*0.4;
+  // Outer ring
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=2; ctx.stroke();
+  const cardinals=[{l:'N',a:-Math.PI/2},{l:'E',a:0},{l:'S',a:Math.PI/2},{l:'W',a:Math.PI}];
+  const interC=[{l:'NE',a:-Math.PI/4},{l:'SE',a:Math.PI/4},{l:'SW',a:Math.PI*3/4},{l:'NW',a:-Math.PI*3/4}];
+  const allDirs=[...cardinals,...interC];
+  // Minor ticks
+  for(let d=0;d<360;d+=15){
+    if(d%45===0) continue;
+    const a=(d-90)*Math.PI/180;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*(r-4), cy+Math.sin(a)*(r-4));
+    ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
+    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  // Cardinal + intercardinal ticks — exits glow gold, others dim
+  allDirs.forEach(d=>{
+    const isExit=exits.some(e=>e.dir===d.l);
+    const isCardinal=cardinals.some(c=>c.l===d.l);
+    const tickLen=isCardinal?8:6;
+    if(isExit){
+      // Glow behind tick
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(d.a)*(r-tickLen), cy+Math.sin(d.a)*(r-tickLen));
+      ctx.lineTo(cx+Math.cos(d.a)*r, cy+Math.sin(d.a)*r);
+      ctx.strokeStyle=rgba(GOLD,0.25); ctx.lineWidth=5; ctx.stroke();
+      // Bright gold tick
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(d.a)*(r-tickLen), cy+Math.sin(d.a)*(r-tickLen));
+      ctx.lineTo(cx+Math.cos(d.a)*r, cy+Math.sin(d.a)*r);
+      ctx.strokeStyle=GOLD; ctx.lineWidth=2.5; ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(d.a)*(r-tickLen), cy+Math.sin(d.a)*(r-tickLen));
+      ctx.lineTo(cx+Math.cos(d.a)*r, cy+Math.sin(d.a)*r);
+      ctx.strokeStyle=isCardinal?TEXT_D:'rgba(255,255,255,.06)'; ctx.lineWidth=isCardinal?2:1; ctx.stroke();
+    }
+  });
+  // Cardinal labels
+  cardinals.forEach(c=>{
+    const isExit=exits.some(e=>e.dir===c.l);
+    const fs=size==='mini'?'8px':'10px';
+    ctx.font='bold '+fs+' monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=c.l==='N'?RED:(isExit?GOLD:TEXT_D);
+    ctx.fillText(c.l, cx+Math.cos(c.a)*(r-18), cy+Math.sin(c.a)*(r-18));
+  });
+  // Inter-cardinal labels for exits only
+  interC.forEach(c=>{
+    const isExit=exits.some(e=>e.dir===c.l);
+    if(isExit){
+      const fs=size==='mini'?'7px':'9px';
+      ctx.font='bold '+fs+' monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle=GOLD;
+      ctx.fillText(c.l, cx+Math.cos(c.a)*(r-14), cy+Math.sin(c.a)*(r-14));
+    }
+  });
+  // Center dot (player)
+  ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2);
+  ctx.fillStyle=GREEN; ctx.fill();
+}
+
+// === RENDER ALL ===
+const W={str:14,dex:12,con:16,wis:11,cha:8};
+const M={str:8,dex:10,con:12,wis:18,cha:14};
+const EX1=[{dir:'N',name:'Village'},{dir:'E',name:'Forest'},{dir:'S',name:'Bridge'}];
+const EX2=[{dir:'N',name:'Cave'},{dir:'SE',name:'River'},{dir:'W',name:'Camp'}];
+
+// Section 1
+buildStatChips(document.getElementById('stats-grid-a'), W, false);
+buildStatChips(document.getElementById('stats-grid-c'), W, true);
+(function(){
+  const c=document.getElementById('stats-inline-b');
+  const labels=['STR','DEX','CON','WIS','CHA'];
+  const vals=[W.str,W.dex,W.con,W.wis,W.cha];
+  vals.forEach((v,i)=>{
+    const chip=document.createElement('div');
+    chip.className='stat-chip '+statClass(v);
+    chip.style.cssText='padding:4px 6px;min-width:44px;';
+    const l=document.createElement('div');l.className='s-label';l.textContent=labels[i];
+    const va=document.createElement('div');va.className='s-value';va.style.fontSize='0.95rem';va.textContent=v;
+    const mo=document.createElement('div');mo.className='s-mod';mo.textContent=statMod(v);
+    chip.appendChild(l);chip.appendChild(va);chip.appendChild(mo);
+    c.appendChild(chip);
+  });
+})();
+
+// Section 2
+drawEnemyArc120(document.getElementById('arc-troll'), 0.80);
+drawEnemyArc120(document.getElementById('arc-goblin'), 0.35);
+drawEnemyArc120(document.getElementById('arc-wraith'), 0.60);
+drawEnemySmoothArc(document.getElementById('smooth-troll'), 0.80);
+drawEnemySmoothArc(document.getElementById('smooth-goblin'), 0.35);
+drawEnemySmoothArc(document.getElementById('smooth-wraith'), 0.60);
+drawEnemyRing(document.getElementById('ring-troll'), 0.80);
+drawEnemyRing(document.getElementById('ring-goblin'), 0.35);
+drawEnemyRing(document.getElementById('ring-wraith'), 0.60);
+
+// Section 3
+drawCompass(document.getElementById('compass-full'), EX1, 'full');
+drawCompass(document.getElementById('compass-mini'), EX1, 'mini');
+
+// Section 4 — Panel A
+drawLedStrip(document.getElementById('fp-hp'), 15/20, hpColor, 24);
+drawLedStrip(document.getElementById('fp-xp'), 65/100, GOLD, 24);
+drawLedStrip(document.getElementById('fp-mp'), 12/20, BLUE, 24);
+buildStatChips(document.getElementById('fp-stats'), W, true);
+drawCompass(document.getElementById('fp-compass'), EX1, 'mini');
+drawEnemyArc120(document.getElementById('fp-e1'), 0.70);
+drawEnemyArc120(document.getElementById('fp-e2'), 0.25);
+
+// Section 4 — Panel B
+drawLedStrip(document.getElementById('fp2-hp'), 18/22, hpColor, 24);
+drawLedStrip(document.getElementById('fp2-xp'), 45/100, GOLD, 24);
+drawLedStrip(document.getElementById('fp2-mp'), 8/25, BLUE, 24);
+buildStatChips(document.getElementById('fp2-stats'), M, true);
+drawCompass(document.getElementById('fp2-compass'), EX2, 'mini');
+drawEnemySmoothArc(document.getElementById('fp2-e1'), 0.55);
+drawEnemySmoothArc(document.getElementById('fp2-e2'), 0.15);
+drawEnemySmoothArc(document.getElementById('fp2-e3'), 0.90);
+</script>
+</body>
+</html>
