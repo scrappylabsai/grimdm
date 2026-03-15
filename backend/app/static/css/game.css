@@ -878,57 +878,55 @@ body {
   font-weight: 600;
 }
 
-/* Bottom controls bar */
-.bottom-controls {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
+/* Panel controls (Save/Load/New in character header) */
+.panel-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 4px 12px;
-  background: var(--bg-deep);
-  border-top: 1px solid var(--border-color);
+  gap: 6px;
 }
 
-.bottom-btn {
+.panel-btn {
   background: transparent;
   border: none;
   color: var(--text-dim);
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 2px 6px;
+  padding: 2px 4px;
   font-family: inherit;
 }
 
-.bottom-btn:hover {
+.panel-btn:hover {
   color: var(--accent-gold);
 }
 
-.bottom-btn--danger:hover {
+.panel-btn--danger:hover {
   color: var(--accent-red);
 }
 
-.bottom-btn.paused {
+.panel-btn.paused {
   color: var(--accent-green);
 }
 
-.bottom-sep {
+.panel-sep {
   color: var(--border-color);
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   user-select: none;
 }
 
+/* Version bar */
+.version-bar {
+  position: fixed;
+  bottom: 0;
+  right: 8px;
+  z-index: 5;
+}
+
 .version-tag {
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   color: var(--text-dim);
-  opacity: 0.4;
-  margin-left: auto;
+  opacity: 0.3;
 }
 
 /* Camera overlay */

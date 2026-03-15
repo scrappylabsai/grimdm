@@ -81,6 +81,13 @@
       <div class="character-panel">
         <div class="panel-header">
           <h2>Character</h2>
+          <div class="panel-controls">
+            <button id="pauseBtn" class="panel-btn" title="Save & pause game">Save</button>
+            <span class="panel-sep">|</span>
+            <button id="loadBtn" class="panel-btn" title="Load saved game">Load</button>
+            <span class="panel-sep">|</span>
+            <button id="newGameBtn" class="panel-btn panel-btn--danger" title="Start a new game">New</button>
+          </div>
         </div>
         <div class="character-content">
           <div class="stat-group">
@@ -195,14 +202,7 @@
       <div class="npc-speech-text" id="npcSpeechText"></div>
     </div>
 
-    <!-- Bottom controls -->
-    <div class="bottom-controls">
-      <button id="pauseBtn" class="bottom-btn" title="Save & pause game">Save</button>
-      <span class="bottom-sep">|</span>
-      <button id="loadBtn" class="bottom-btn" title="Load saved game">Load</button>
-      <span class="bottom-sep">|</span>
-      <button id="newGameBtn" class="bottom-btn bottom-btn--danger" title="Start a new game">New Game</button>
-      <span class="version-tag">v0.1.0</span>
-    </div>
+    <!-- Version tag -->
+    <div class="version-bar"><span class="version-tag">v0.1.0</span></div>
   </body>
 </html>
