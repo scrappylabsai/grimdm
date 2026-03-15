@@ -92,6 +92,9 @@ const manaStripCanvas = document.getElementById('manaStrip');
 const hpValueEl = document.getElementById('hpValue');
 const xpValueEl = document.getElementById('xpValue');
 const manaValueEl = document.getElementById('manaValue');
+const dmStatusBar = document.getElementById('dmStatusBar');
+const dmStatusText = document.getElementById('dmStatusText');
+const dmStatusPulse = document.getElementById('dmStatusPulse');
 const compassCanvas = document.getElementById('compassCanvas');
 const charExitList = document.getElementById('charExits');
 const combatGroup = document.getElementById('combatGroup');
@@ -102,6 +105,41 @@ const creatureRadarGroup = document.getElementById('creatureRadarGroup');
 
 // Tracked vitals state for instrument updates
 let currentHp = 20, currentMaxHp = 20, currentXp = 0, currentMana = 20, currentMaxMana = 20;
+
+// Status bar pulse animation
+let statusPulseId = null;
+let statusPulsePhase = 0;
+function renderStatusPulse(mode) {
+  if (!dmStatusPulse) return;
+  const d = window.devicePixelRatio || 1;
+  const w = dmStatusPulse.clientWidth, h = dmStatusPulse.clientHeight;
+  dmStatusPulse.width = w * d;
+  dmStatusPulse.height = h * d;
+  const ctx = dmStatusPulse.getContext('2d');
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+
+  const colors = { thinking: '#7a5aaa', speaking: '#c9a84c', listening: '#4a9a5c' };
+  const color = colors[mode] || colors.thinking;
+
+  function animatePulse() {
+    statusPulsePhase += 0.06;
+    ctx.clearRect(0, 0, w, h);
+    const pulse = 0.4 + 0.6 * Math.abs(Math.sin(statusPulsePhase));
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = pulse * 0.3;
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    statusPulseId = requestAnimationFrame(animatePulse);
+  }
+  cancelAnimationFrame(statusPulseId);
+  animatePulse();
+}
 
 // Thinking phrases — randomly chosen, mystical & playful
 const thinkingPhrases = [
@@ -143,6 +181,12 @@ function showDMIndicator(mode = 'thinking') {
   startDMHeartbeat(dmHeartbeatCanvas);
   setDMHeartbeatMode(mode);
 
+  // Show prominent status bar
+  dmStatusBar.classList.add('visible');
+  dmStatusBar.classList.remove('thinking', 'speaking', 'listening');
+  dmStatusBar.classList.add(mode);
+  dmStatusBar.setAttribute('aria-hidden', 'false');
+
   // Start elapsed timer
   if (!dmTimerStart) dmTimerStart = Date.now();
   clearInterval(dmTimerInterval);
@@ -151,15 +195,23 @@ function showDMIndicator(mode = 'thinking') {
     const phrase = mode === 'speaking' ? speakingPhrases : thinkingPhrases;
     const base = phrase[Math.floor(dmTimerStart / 1000) % phrase.length];
     dmIndicatorText.textContent = `${base} ${elapsed}s`;
+    dmStatusText.textContent = `${base} ${elapsed}s`;
   }, 1000);
   // Show initial text immediately
   const phrase = mode === 'speaking' ? speakingPhrases : thinkingPhrases;
-  dmIndicatorText.textContent = phrase[Math.floor(Math.random() * phrase.length)];
+  const text = phrase[Math.floor(Math.random() * phrase.length)];
+  dmIndicatorText.textContent = text;
+  dmStatusText.textContent = text;
+
+  // Mini pulse animation on status bar
+  renderStatusPulse(mode);
 }
 
 function hideDMIndicator() {
   clearInterval(dmTimerInterval);
   dmTimerStart = null;
+  cancelAnimationFrame(statusPulseId);
+  statusPulseId = null;
 
   // Show "your turn" state if mic is active
   if (isAudioActive) {
@@ -168,9 +220,17 @@ function hideDMIndicator() {
     dmIndicatorText.textContent = 'Your turn — speak...';
     dmIndicator.setAttribute('aria-hidden', 'false');
     setDMHeartbeatMode('listening');
+    // Status bar shows listening
+    dmStatusBar.classList.add('visible', 'listening');
+    dmStatusBar.classList.remove('thinking', 'speaking');
+    dmStatusBar.setAttribute('aria-hidden', 'false');
+    dmStatusText.textContent = 'Your turn — speak...';
+    renderStatusPulse('listening');
   } else {
     dmIndicator.classList.remove('visible', 'speaking', 'listening');
     dmIndicator.setAttribute('aria-hidden', 'true');
+    dmStatusBar.classList.remove('visible', 'thinking', 'speaking', 'listening');
+    dmStatusBar.setAttribute('aria-hidden', 'true');
     stopDMHeartbeat();
   }
 }

@@ -92,6 +92,49 @@ body {
   max-width: 60%;
 }
 
+/* DM status bar — prominent thinking/speaking indicator */
+.dm-status-bar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 16px;
+  background: var(--bg-panel-alt);
+  border-bottom: 1px solid var(--border-color);
+  min-height: 24px;
+}
+
+.dm-status-bar.visible {
+  display: flex;
+}
+
+.dm-status-pulse {
+  display: block;
+  width: 30px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.dm-status-text {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-dim);
+  transition: color 0.4s;
+}
+
+.dm-status-bar.speaking .dm-status-text {
+  color: var(--accent-gold);
+}
+
+.dm-status-bar.thinking .dm-status-text {
+  color: var(--accent-purple);
+}
+
+.dm-status-bar.listening .dm-status-text {
+  color: var(--accent-green);
+}
+
 /* Game layout — bottom section */
 .game-layout {
   flex: 1;
