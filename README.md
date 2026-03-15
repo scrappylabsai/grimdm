@@ -92,6 +92,21 @@ Open http://localhost:8080 — click **Speak** to start voice mode, or type in t
 
 > **Note**: Voice input requires HTTPS (or localhost). For remote access, use a reverse proxy with TLS.
 
+### Reproducible Testing Instructions
+
+1. **Live demo**: Visit https://grimdm.scrappylabs.ai — no setup required
+2. **Click "Enter the Thornwood"** to dismiss the intro overlay
+3. **Click "Speak"** to enable voice — allow microphone access when prompted
+4. **The DM will greet you** — say your character name (e.g. "My name is Grim")
+5. **Play through the prologue**:
+   - Stats are rolled automatically after you give your name
+   - A forest scene generates via Imagen 4
+   - You'll encounter Bramble (NPC with distinct voice) — talk to him peacefully
+   - A wolf attacks — say "I attack the wolf" to enter combat
+   - After winning, you arrive at the village and meet Marta (another NPC voice)
+6. **Features to test**: voice interruption (talk while DM speaks), background music changes, sound effects during combat, quest tracking in the side panel, XP awards
+7. **To run locally**: clone the repo, add your `GOOGLE_API_KEY` to `.env`, run with `uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --ws-max-size 5242880`
+
 ### Deploy to Cloud Run
 
 ```bash
