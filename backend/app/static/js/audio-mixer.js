@@ -14,7 +14,7 @@ export async function initDMVoice() {
   await ctx.audioWorklet.addModule(workletURL);
 
   const gainNode = ctx.createGain();
-  gainNode.gain.value = 1.0;
+  gainNode.gain.value = 0.7; // Default lower — DM voice is loud
 
   const playerNode = new AudioWorkletNode(ctx, 'pcm-player-processor');
   playerNode.connect(gainNode);
@@ -114,10 +114,20 @@ export async function playNPCAudio(base64Audio, mimeType = 'audio/mpeg') {
   });
 }
 
+let dmVolume = 0.7; // User-adjustable DM voice level
+
+export function setDMVoiceVolume(level) {
+  dmVolume = Math.max(0, Math.min(1, level));
+}
+
+export function getDMVoiceVolume() {
+  return dmVolume;
+}
+
 // Duck DM voice while NPC is speaking
 export function duckDMVoice(dmGainNode, duck = true) {
   if (!dmGainNode) return;
-  const target = duck ? 0.3 : 1.0;
+  const target = duck ? 0.3 * dmVolume : dmVolume;
   dmGainNode.gain.linearRampToValueAtTime(
     target,
     dmGainNode.context.currentTime + 0.3

@@ -10,6 +10,7 @@ import {
   duckDMVoice,
   setMusic,
   setMusicVolume,
+  setDMVoiceVolume,
   playSFX,
 } from './audio-mixer.js';
 
@@ -259,6 +260,16 @@ const questList = document.getElementById('questList');
 
 // --- WebSocket ---
 
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_MESSAGES = [
+  'The Thornwood shimmers...',
+  'The mist swirls around you...',
+  'Reality bends and reforms...',
+  'The portal flickers...',
+  'The void reaches back...',
+];
+
 function connectWebSocket() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const url = `${proto}//${location.host}/ws/${userId}/${sessionId}`;
@@ -269,7 +280,8 @@ function connectWebSocket() {
   websocket.onopen = () => {
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     statusDot.classList.add('connected');
-    statusText.textContent = 'Connected';
+    statusText.textContent = reconnectAttempts > 0 ? 'The tale continues...' : 'Connected';
+    reconnectAttempts = 0;
     sendBtn.disabled = false;
     lastServerMessageTime = Date.now();
     if (isAudioActive) startHeartbeat();
@@ -292,13 +304,18 @@ function connectWebSocket() {
   websocket.onclose = () => {
     sendBtn.disabled = true;
     stopHeartbeat();
-    if (isPaused) return; // Don't reconnect when paused
-    // Only show "Reconnecting" if it takes more than 2s
+    if (isPaused) return;
+    reconnectAttempts++;
+    if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+      statusDot.classList.remove('connected');
+      statusText.textContent = 'Connection lost — click Speak to retry';
+      return;
+    }
     reconnectTimer = setTimeout(() => {
       statusDot.classList.remove('connected');
-      statusText.textContent = 'Reconnecting...';
-    }, 1000);
-    setTimeout(connectWebSocket, 1000);
+      statusText.textContent = RECONNECT_MESSAGES[reconnectAttempts - 1] || 'Reconnecting...';
+    }, 500);
+    setTimeout(connectWebSocket, 1500);
   };
 
   websocket.onerror = () => {
@@ -1205,6 +1222,15 @@ micBtn.addEventListener('click', async () => {
 
 musicSlider.addEventListener('input', () => {
   setMusicVolume(musicSlider.value / 100);
+});
+
+const dmVolumeSlider = document.getElementById('dmVolume');
+dmVolumeSlider?.addEventListener('input', () => {
+  const level = dmVolumeSlider.value / 100;
+  setDMVoiceVolume(level);
+  if (dmVoice?.gainNode) {
+    dmVoice.gainNode.gain.linearRampToValueAtTime(level, dmVoice.ctx.currentTime + 0.1);
+  }
 });
 
 let isPaused = false;

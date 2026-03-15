@@ -1294,17 +1294,53 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .game-layout { flex-direction: column; }
+  .game-layout {
+    flex-direction: column;
+    height: 100dvh;
+  }
+  .scene-container {
+    height: 25vh;
+    min-height: 140px;
+    flex-shrink: 0;
+  }
+  .transcript-panel {
+    border-right: none;
+    flex: 1;
+    min-height: 0;
+  }
   .character-panel {
     max-width: none;
-    max-height: 200px;
+    max-height: 180px;
     border-top: 1px solid var(--border-color);
+    overflow-y: auto;
+    flex-shrink: 0;
   }
-  .transcript-panel { border-right: none; }
-  .scene-container { height: 20vh; min-height: 120px; }
+  .input-area {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border-color);
+    padding: 6px 8px;
+  }
+  .audio-controls {
+    gap: 6px;
+  }
+  #micBtn {
+    min-width: 56px;
+    min-height: 44px;
+    font-size: 0.95rem;
+  }
+  .music-slider-control input[type="range"] {
+    width: 60px;
+  }
   .camera-viewfinder { max-width: 95vw; max-height: 50vh; }
   .gesture-prompt { font-size: 1.4rem; }
   .htp-title { font-size: 2.2rem; }
   .htp-tips { grid-template-columns: 1fr; }
-  .htp-content { padding: 0 8px; }
+  .htp-content { padding: 0 12px; }
+  .htp-start-btn {
+    font-size: 1.1rem;
+    padding: 14px 28px;
+  }
 }
