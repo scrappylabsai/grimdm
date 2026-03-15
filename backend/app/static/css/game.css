@@ -808,6 +808,39 @@ body {
 
 .quest-item.completed { border-left-color: var(--accent-green); opacity: 0.6; }
 
+/* XP float notification */
+.xp-float {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 150;
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.6s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.xp-float.show {
+  opacity: 1;
+  transform: translate(-50%, -20px);
+}
+.xp-float-amount {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: var(--accent-green);
+  text-shadow: 0 0 12px rgba(74,154,92,0.5), 0 2px 6px rgba(0,0,0,0.6);
+}
+.xp-float-reason {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .empty-state {
   font-size: 0.8rem;
   color: var(--text-dim);

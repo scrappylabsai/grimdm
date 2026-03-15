@@ -548,6 +548,10 @@ function handleToolResult(funcResponse) {
     case 'modify_gold':
       charGold.textContent = data.gold;
       break;
+    case 'award_xp':
+      if (data.xp !== undefined) updateCharSheet(data);
+      if (data.xp_awarded) showXPFloat(data.xp_awarded, data.reason);
+      break;
     case 'get_location_info':
     case 'move_player':
       if (data.name || data.location_name) {
@@ -644,6 +648,27 @@ function showLevelUp(level) {
     el.classList.remove('show');
     setTimeout(() => el.remove(), 500);
   }, 2500);
+}
+
+function showXPFloat(amount, reason) {
+  const el = document.createElement('div');
+  el.className = 'xp-float';
+  const amtEl = document.createElement('span');
+  amtEl.className = 'xp-float-amount';
+  amtEl.textContent = '+' + amount + ' XP';
+  el.appendChild(amtEl);
+  if (reason) {
+    const reasonEl = document.createElement('span');
+    reasonEl.className = 'xp-float-reason';
+    reasonEl.textContent = reason;
+    el.appendChild(reasonEl);
+  }
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 600);
+  }, 2000);
 }
 
 function updateCharSheet(data) {

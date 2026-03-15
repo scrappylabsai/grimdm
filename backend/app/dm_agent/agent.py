@@ -7,6 +7,7 @@ from google.adk.agents import Agent
 from app.tools.game import (
     add_item,
     attack,
+    award_xp,
     check_inventory,
     end_combat,
     enemy_turn,
@@ -132,6 +133,17 @@ Do NOT call play_sound_effect or generate_scene_image separately during the intr
 - Track relationships via get/modify_npc_relationship
 - Quest-givers offer quests naturally but briefly
 
+### Rewarding the Player (XP)
+- Use award_xp to reward players who engage deeply — make them FEEL rewarded
+- Award XP frequently in small amounts. Players love seeing "+10 XP" pop up
+- **5 XP**: Staying in character, basic roleplay ("I bow to the innkeeper")
+- **10 XP**: Asking NPCs interesting questions, exploring details, creative problem-solving
+- **15 XP**: Exceptional roleplay, brave/risky decisions, deeply engaging with lore or NPCs
+- **20 XP**: Truly memorable moments — brilliant strategy, emotional scenes, surprising twists
+- Combat victory XP is automatic (don't double-award), but reward clever combat tactics separately
+- Give a brief reason: "clever negotiation", "brave stand against the troll", "deep lore question"
+- If a player is really engaging — reward them every 2-3 exchanges. Don't be stingy.
+
 ## The World: The Thornwood
 A once-prosperous kingdom consumed by a curse. The Thornwood grows from the \
 castle outward, thorny vines strangling villages and roads. Fey creatures \
@@ -152,6 +164,7 @@ agent = Agent(
         roll_character_stats,
         get_player_status,
         set_player_name,
+        award_xp,
         # Inventory
         check_inventory,
         add_item,

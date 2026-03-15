@@ -207,6 +207,39 @@ def get_player_status(session_id: str) -> str:
     })
 
 
+def award_xp(amount: int, reason: str, session_id: str) -> str:
+    """Award experience points to the player for roleplay, clever solutions, exploration, or bravery.
+
+    Use this to reward players who dive deep into roleplay, ask interesting questions to NPCs,
+    make creative decisions, explore dangerous areas, or do something memorable. Small frequent
+    rewards (5-15 XP) feel better than rare large ones.
+
+    Suggested amounts:
+    - 5 XP: Good roleplay moment, staying in character
+    - 10 XP: Clever solution, creative thinking, asking great NPC questions
+    - 15 XP: Exceptional roleplay, brave or risky decision, deeply exploring lore
+    - 20 XP: Truly memorable moment, brilliant strategy, emotional scene
+    - 25 XP: Combat victory (awarded automatically, don't double-award)
+
+    Args:
+        amount: XP to award (5-25 range recommended)
+        reason: Brief reason shown to the player (e.g. "clever negotiation", "deep roleplay")
+        session_id: Current game session ID
+
+    Returns:
+        JSON with updated XP totals and level info
+    """
+    session_id = resolve_session_id(session_id)
+    state = _get_state(session_id)
+    amount = max(1, min(50, amount))  # clamp to sane range
+    xp_info = _award_xp(state, amount)
+    xp_info["reason"] = reason
+    xp_info["xp_awarded"] = amount
+    state.events_log.append(f"XP +{amount}: {reason}")
+    _save_state(session_id)
+    return json.dumps(xp_info)
+
+
 def set_player_name(name: str, session_id: str) -> str:
     """Set the player's character name.
 
