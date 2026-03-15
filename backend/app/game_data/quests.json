@@ -1,5 +1,19 @@
 {
   "quests": {
+    "thornwood_awakening": {
+      "name": "The Thornwood Awakening",
+      "description": "You awaken in the Deep Thornwood with no memory of how you arrived. The cursed forest tests all who enter — survive its guardian, defeat its predators, and reach the safety of Briarhollow Hamlet. Only then does your true journey begin.",
+      "objectives": [
+        "Survive the encounter with Bramble",
+        "Defeat the Thornwood Wolf",
+        "Escape the Deep Thornwood",
+        "Reach Briarhollow Hamlet"
+      ],
+      "reward_xp": 75,
+      "reward_items": ["thornwood_survivor_token"],
+      "given_by": null,
+      "prologue": true
+    },
     "thornwood_investigation": {
       "name": "The Spreading Blight",
       "description": "Marta has noticed the thorns are growing faster — reaching the hamlet walls. Something in the Deep Thornwood is accelerating the curse. Investigate and find the source.",
@@ -64,6 +78,46 @@
       "reward_xp": 500,
       "reward_items": [],
       "given_by": null
+    },
+    "wanderers_trial": {
+      "name": "The Wanderer's Trial",
+      "description": "Before the Thornwood accepts you, it tests you. A voice from the standing stones challenges you to prove your worth — fight a shadow, solve a riddle, and make an offering. Only then may you walk the cursed paths freely.",
+      "objectives": [
+        "Visit the Whispering Stones and hear the challenge",
+        "Defeat the Shadow Wisp in combat",
+        "Answer Echo's riddle",
+        "Leave an offering at the stone shrine"
+      ],
+      "reward_xp": 75,
+      "reward_items": ["waystone_charm"],
+      "given_by": "echo"
+    },
+    "pips_heist": {
+      "name": "Pip's Impossible Heist",
+      "description": "Pip has spotted something priceless at the Goblin Market — a music box that plays a song only the dead can hear. But Nixie won't sell it for gold. Pip needs a partner for a daring swap: distract Nixie while Pip makes the switch.",
+      "objectives": [
+        "Meet Pip behind the tavern in Briarhollow",
+        "Travel to the Goblin Market together",
+        "Distract Nixie Quickfingers (persuasion or performance)",
+        "Signal Pip when the moment is right",
+        "Escape the market before Nixie notices"
+      ],
+      "reward_xp": 125,
+      "reward_items": ["dead_mans_music_box"],
+      "given_by": "pip"
+    },
+    "fathers_garden": {
+      "name": "The Priest's Last Garden",
+      "description": "Father Moss tends a garden in the ruined chapel where flowers grow that shouldn't exist — blooms that cure the thorn-sickness. But the seeds are dying. He needs someone to find the Mother Root deep in the Thornwood before the last flower wilts.",
+      "objectives": [
+        "Speak with Father Moss about the dying garden",
+        "Enter the Deep Thornwood and search for the Mother Root",
+        "Negotiate with or fight past Bramble who guards it",
+        "Return the Mother Root to Father Moss"
+      ],
+      "reward_xp": 175,
+      "reward_items": ["thornbane_potion"],
+      "given_by": "father_moss"
     }
   }
 }

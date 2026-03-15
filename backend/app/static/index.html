@@ -4,11 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GrimDM — Voice AI Dungeon Master</title>
-    <link rel="stylesheet" href="/static/css/game.css?v=26">
-    <script src="/static/js/app.js?v=26" type="module"></script>
+    <link rel="stylesheet" href="/static/css/game.css?v=27">
+    <script src="/static/js/app.js?v=27" type="module"></script>
   </head>
 
   <body>
+    <!-- How to Play overlay — shown before first game -->
+    <div id="howToPlay" class="how-to-play-overlay" aria-label="How to play guide">
+      <div class="htp-content">
+        <h1 class="htp-title">GrimDM</h1>
+        <p class="htp-subtitle">Voice AI Dungeon Master</p>
+
+        <div class="htp-section">
+          <h2>How to Play</h2>
+          <p>Speak naturally to the Dungeon Master. Describe what your character does, asks, or examines. The DM responds with voice, rolls dice, and controls the world.</p>
+        </div>
+
+        <div class="htp-tips">
+          <div class="htp-tip">
+            <span class="htp-tip-icon">&#9876;</span>
+            <div>
+              <strong>Act &amp; Explore</strong>
+              <p>"I search the room for hidden doors"</p>
+              <p>"I walk toward the bridge"</p>
+            </div>
+          </div>
+          <div class="htp-tip">
+            <span class="htp-tip-icon">&#128172;</span>
+            <div>
+              <strong>Talk to NPCs</strong>
+              <p>"I ask the innkeeper about the curse"</p>
+              <p>"I try to persuade the troll to let me pass"</p>
+            </div>
+          </div>
+          <div class="htp-tip">
+            <span class="htp-tip-icon">&#9876;</span>
+            <div>
+              <strong>Fight</strong>
+              <p>"I attack the creature with my sword"</p>
+              <p>"I try to dodge and strike back"</p>
+            </div>
+          </div>
+          <div class="htp-tip">
+            <span class="htp-tip-icon">&#127922;</span>
+            <div>
+              <strong>Use Items</strong>
+              <p>"I drink the healing potion"</p>
+              <p>"What's in my inventory?"</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="htp-section htp-protips">
+          <h2>Pro Tips</h2>
+          <ul>
+            <li>You can <strong>interrupt</strong> the DM mid-sentence — just start talking</li>
+            <li>Say <strong>"look around"</strong> for detailed scene descriptions</li>
+            <li>The DM may challenge you to <strong>gesture battles</strong> — show moves with your camera</li>
+            <li>Your choices affect NPC relationships and story outcomes</li>
+            <li>Say <strong>"what are my options?"</strong> if you're stuck</li>
+          </ul>
+        </div>
+
+        <button id="htpStartBtn" class="htp-start-btn" aria-label="Begin your adventure">
+          Enter the Thornwood
+        </button>
+        <p class="htp-skip-note">Microphone &amp; camera access required for full experience</p>
+      </div>
+    </div>
+
     <!-- Scene art background / main display -->
     <div id="sceneContainer" class="scene-container">
       <div class="scene-overlay"></div>

@@ -76,13 +76,13 @@ class Player(BaseModel):
     attack: int = 5
     defense: int = 3
     stats: CharacterStats = Field(default_factory=CharacterStats)
-    location: str = "crossroads"
+    location: str = "deep_thornwood"
     inventory: list[Item] = Field(default_factory=list)
     gold: int = 10
     quests: list[Quest] = Field(default_factory=list)
     npc_relationships: list[NPCRelationship] = Field(default_factory=list)
     combat: CombatState = Field(default_factory=CombatState)
-    current_music: str = "village"
+    current_music: str = "dungeon"
     voice_captured: bool = False
 
 
