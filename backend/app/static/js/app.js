@@ -531,6 +531,7 @@ function handleToolResult(funcResponse) {
         charCon.textContent = data.rolls.constitution;
         charWis.textContent = data.rolls.wisdom;
         charCha.textContent = data.rolls.charisma;
+        updateStatChips(data.rolls.strength, data.rolls.dexterity, data.rolls.constitution, data.rolls.wisdom, data.rolls.charisma);
         drawStatRadar(statRadarCanvas, data.rolls.strength, data.rolls.dexterity, data.rolls.constitution, data.rolls.wisdom, data.rolls.charisma);
       }
       if (data.derived) {
@@ -678,9 +679,9 @@ function updateCharSheet(data) {
   if (data.level) charLevel.textContent = data.level;
   if (data.hp !== undefined) updateHP(data.hp, data.max_hp);
   if (data.xp !== undefined) {
-    currentXp = data.xp_in_level !== undefined ? data.xp_in_level : (data.xp % 100);
+    currentXp = data.xp;
     xpText.textContent = data.xp;
-    xpValueEl.textContent = `${data.xp_in_level !== undefined ? data.xp_in_level : (data.xp % 100)}/100`;
+    xpValueEl.textContent = `${data.xp} XP`;
     drawVitalStrips(hpStripCanvas, xpStripCanvas, manaStripCanvas, currentHp, currentMaxHp, currentXp, currentMana, currentMaxMana);
   }
   if (data.leveled_up && data.new_level) showLevelUp(data.new_level);
@@ -1409,8 +1410,9 @@ async function restoreGameState() {
       if (data.location) charLocation.textContent = data.location;
       if (data.connections) updateCompassExits(data.connections, data.exit_directions);
       if (data.xp !== undefined) {
-        currentXp = data.xp % 100;
+        currentXp = data.xp;
         xpText.textContent = data.xp;
+        xpValueEl.textContent = `${data.xp} XP`;
       }
       updateHP(data.hp, data.max_hp);
       if (data.inventory) updateInventory(data.inventory);
@@ -1426,14 +1428,8 @@ async function restoreGameState() {
 restoreGameState();
 
 // How to Play overlay — show for first-time players, skip for returning
-const hasPlayed = localStorage.getItem('grimdm_hasPlayed');
-if (hasPlayed) {
-  htpOverlay.classList.add('hidden');
-  addSystemMessage('Press "Speak" to begin your adventure, or type below.');
-  statusText.textContent = 'Ready';
-} else {
-  statusText.textContent = 'Welcome';
-}
+// Always show the How to Play overlay — it IS the intro
+statusText.textContent = 'Welcome';
 
 htpStartBtn?.addEventListener('click', () => {
   localStorage.setItem('grimdm_hasPlayed', '1');

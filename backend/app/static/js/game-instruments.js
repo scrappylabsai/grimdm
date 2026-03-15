@@ -102,7 +102,7 @@ function animateVitalStrips() {
     const hpPct = s.maxHp > 0 ? s.aHp / s.maxHp : 0;
     const lowHp = s.hp / s.maxHp < 0.3;
     renderLedStrip(s.canvases.hp, hpPct, 'hp', lowHp ? s.pulsePhase : null);
-    renderLedStrip(s.canvases.xp, s.aXp / 100, 'xp', null);
+    renderLedStrip(s.canvases.xp, Math.min(1, s.aXp / 200), 'xp', null);
     renderLedStrip(s.canvases.mana, s.maxMana > 0 ? s.aMana / s.maxMana : 0, 'mana', null);
   }
 

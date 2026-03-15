@@ -262,7 +262,11 @@ async def websocket_endpoint(
     async def upstream_task() -> None:
         """Receive messages from browser WebSocket and queue for ADK."""
         while True:
-            message = await websocket.receive()
+            try:
+                message = await websocket.receive()
+            except RuntimeError:
+                # Client disconnected — exit cleanly
+                return
 
             if "bytes" in message:
                 raw = message["bytes"]
