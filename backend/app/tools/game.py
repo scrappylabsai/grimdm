@@ -415,6 +415,7 @@ def get_location_info(session_id: str) -> str:
         "description": location["description"],
         "atmosphere": location.get("atmosphere", ""),
         "connections": location.get("connections", []),
+        "exit_directions": location.get("directions", {}),
         "npcs_present": present_npcs,
         "suggested_music": location.get("music", "village"),
     })
@@ -462,6 +463,7 @@ def move_player(destination: str, session_id: str) -> str:
         "description": new_location["description"],
         "atmosphere": new_location.get("atmosphere", ""),
         "connections": new_location.get("connections", []),
+        "exit_directions": new_location.get("directions", {}),
         "suggested_music": new_location.get("music", "village"),
     })
 

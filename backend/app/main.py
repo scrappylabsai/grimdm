@@ -182,9 +182,11 @@ async def list_saved_games():
 @app.get("/api/game-state/{session_id}")
 async def get_game_state(session_id: str):
     """Get persisted game state for a session (used on page reload)."""
-    from app.tools.game import _get_state
+    from app.tools.game import _get_state, _load_world
     state = _get_state(session_id)
     p = state.player
+    world = _load_world()
+    loc = world.get("locations", {}).get(p.location, {})
     return {
         "name": p.name,
         "level": p.level,
@@ -194,11 +196,13 @@ async def get_game_state(session_id: str):
         "attack": p.attack,
         "defense": p.defense,
         "gold": p.gold,
-        "location": p.location,
+        "location": loc.get("name", p.location),
         "stats": p.stats.model_dump(),
         "inventory": [item.model_dump() for item in p.inventory],
         "quests": [q.model_dump() for q in p.quests if q.status.value == "active"],
         "combat_active": p.combat.active,
+        "connections": loc.get("connections", []),
+        "exit_directions": loc.get("directions", {}),
     }
 
 
